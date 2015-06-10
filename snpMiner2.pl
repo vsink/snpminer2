@@ -10,19 +10,22 @@ use Data::Dumper;
 use Carp;
 use IO::Compress::RawDeflate qw(rawdeflate $RawDeflateError);
 use IO::Uncompress::RawInflate qw(rawinflate $RawInflateError);
+use Array::Utils qw(:all);
+use Term::ANSIColor;
 
 # use Benchmark qw(:all) ;
 # my $t0 = Benchmark->new;
 
-my $genome_seq_obj      = "";    # BioSeq объект с геномом
+my $genome_seq_obj      = "";        # BioSeq объект с геномом
 my $tmp_res_codon_seq   = "";
 my $tree_codon_sequence = "";
 my $db_version          = "";
 my $snp_list_exists     = 0;
 my $ref_genome_name     = "";
 my $organism_name       = "";
-my $version="0.2.1";
-my $about_msg="Program: snpMiner2 (Tool for analysis of variable call format files)\n";
+my $version             = "0.2.1";
+my $about_msg
+    = "Program: snpMiner2 (Tool for analysis of variable call format files)\n";
 
 #-------------------------------
 my %database;
@@ -34,18 +37,22 @@ my %aa_hash;
 my %snp_list_h;
 my %snp_igpos_list_h;
 
-
 # my %snps_h;
 my %options;
 
-GetOptions( \%options, 'db=s', 'action=s', 'snp_list=s', 'vcf=s', "about!", 'help' );
+GetOptions(
+    \%options, 'db=s',   'action=s', 'snp_list=s',
+    'vcf=s',   "about!", "color",    'help',
+    'snp_th=s'
+);
 
 if ( $options{action} eq "rf" ) {
     &load_db( $options{db} );
     &write_dump;
 }
 elsif ($options{action} eq "annotation" && $options{vcf} ne ""
-    || $options{action} eq "annotation.1" && $options{vcf} ne "" )
+    || $options{action} eq "annotation.1"  && $options{vcf} ne ""
+    || $options{action} eq "annotation.11" && $options{vcf} ne "" )
 {
 
     &load_db( $options{db} );
@@ -57,17 +64,19 @@ elsif ( $options{action} eq "check_snp" ) {
 
     if ( $options{snp_list} ne "" && $options{db} ne "" ) {
         &load_db( $options{db} );
-#         foreach my $key (keys %snp_list_h){
-#     print "$key\n";
-# }
-# exit;
+
+        #         foreach my $key (keys %snp_list_h){
+        #     print "$key\n";
+        # }
+        # exit;
         if ( exists $snp_list_h{ $options{snp_list} } ) {
 
-            &use_snp_classification;
+            &use_snp_classification_coding;
         }
-        elsif ( exists $snp_igpos_list_h{$options{snp_list} } ) {
+        elsif ( exists $snp_igpos_list_h{ $options{snp_list} } ) {
 
-            print "Yes, this is intergenic positions!!!\n";
+            # print "Yes, this is intergenic positions!!!\n";
+            &use_snp_classification_intergenic( $options{snp_list} );
         }
         else {
             print "The SNP classification name is not found!\n";
@@ -78,7 +87,9 @@ elsif ( $options{action} eq "check_snp" ) {
     }
 
 }
-elsif ( $options{action} eq "annotation.2" && $options{vcf} ne "" || $options{action} eq "annotation.3" && $options{vcf} ne "" ) {
+elsif ($options{action} eq "annotation.2" && $options{vcf} ne ""
+    || $options{action} eq "annotation.3" && $options{vcf} ne "" )
+{
 
     &load_db( $options{db} );
 
@@ -102,11 +113,11 @@ elsif ( $options{action} eq "uniq.3" ) {
     &find_uniq_genes_formated( $options{vcf} );
 
 }
-elsif ( $options{action} eq "t3" ) {
+elsif ( $options{action} eq "uniq.4" ) {
 
     &load_db( $options{db} );
 
-    &test3( $options{vcf} );
+    &compare_files_by_snp( $options{vcf} );
 
 }
 elsif ( $options{action} eq "t4" ) {
@@ -124,8 +135,6 @@ elsif ( $options{action} eq "t5" || $options{action} eq "t5.1" ) {
 
 }
 
-
-
 if ( $options{about} ) {
     print "-" x 60
         . "\nThe snpMiner2 was written by Viacheslav V.Sinkov, 2015\n\t\twebsite: http://snpminer.ru\n"
@@ -137,8 +146,6 @@ if ( $options{about} ) {
 #         . "\n Annotation of the vcf file:\n./snpMiner2.pl -db db_name -action annotation -vcf vcf_file_name.vcf\n"
 #         . "-" x 60 . "\n";
 # }
-
-
 
 sub write_dump {
 
@@ -177,7 +184,7 @@ sub codon2aa {
 sub aa_decode {
 
     #convert three letter AA to short nomenclature (one letter)
-    my ($aa_input) = shift;
+    my $aa_input = shift;
 
     if ( exists $aa_hash{$aa_input} ) {
         return $aa_hash{$aa_input};
@@ -206,9 +213,8 @@ sub load_db {
     $organism_name   = $database{options}{organism_name};
     $snp_list_exists = scalar $database{options}{snp_list_exists};
     if ( $snp_list_exists == 1 ) {
-        %snp_list_h = %{ $hash_ref->{dict}{snp_list}{coding} };
+        %snp_list_h       = %{ $hash_ref->{dict}{snp_list}{coding} };
         %snp_igpos_list_h = %{ $hash_ref->{dict}{snp_list}{intergenic} };
-        # %snp_list_type_h = %{ $hash_ref->{dict}{snp_list_type} };
     }
 
 }
@@ -230,7 +236,8 @@ sub annotate_vcf {
         if ( length($2) == 1 && length($3) == 1 ) {
             my %tmp = &get_locus_info( $1, $3 );
             if ( $loc_ref_name ne $ref_genome_name ) {
-                print "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                print colored ['bold red'],
+                    "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                 exit;
             }
 
@@ -271,8 +278,14 @@ sub annotate_vcf {
                     $AACI = "-\t-\t-\t$loc_AACI_flag\t";
                 }
                 if ( $options{action} eq "annotation.1" ) {
-                    print
-                        "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n";
+                    if ( $loc_AACI_flag eq "+++" && $options{color} == 1 ) {
+                        print colored ['bold green'],
+                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n";
+                    }
+                    else {
+                        print
+                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n";
+                    }
                 }
 
        # elsif ( $options{action} eq "annotation.2" ) {
@@ -280,8 +293,21 @@ sub annotate_vcf {
        #         "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t\t$tmp{'product'}\n";
        # }
                 elsif ( $options{action} eq "annotation" ) {
+
+                    # print  color 'bold green';
+                    if ( $loc_AACI_flag eq "+++" && $options{color} == 1 ) {
+                        print colored ['bold green'],
+                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\n";
+                    }
+                    else {
+                        print
+                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\n";
+                    }
+                }
+                elsif ( $options{action} eq "annotation.11" ) {
                     print
-                        "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\n";
+                        "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n"
+                        if $loc_AACI_flag eq "+++";
                 }
 
                 $loc_AACI      = 0;
@@ -296,7 +322,93 @@ sub annotate_vcf {
 
 }
 
-sub use_snp_classification {
+sub use_snp_classification_intergenic {
+    my $snp_class_name = shift;
+    my @files          = glob('*.vcf');
+    my $class_found    = 0;
+    my $class_query    = "";
+    my $query_locus    = "";
+    my $query_snp      = "";
+    my @class_a;
+    my $snp_count        = 0;
+    my $tab              = "";
+    my $res              = "";
+    my $loc_ref_name     = "";
+    my $loc_snp_notation = "";
+    my $position_type    = "";
+
+    foreach my $file (@files) {
+        print "$file";
+        my @res_a;
+        open( my $fh, "<", $file )
+            or croak "cannot open < $file: $!";
+        while (<$fh>) {
+            my $str = "$_";
+            $str =~ /.*(?<ref_genome>$ref_genome_name)/x;
+            if (   $+{ref_genome} eq "$ref_genome_name"
+                && $+{ref_genome} ne "" )
+            {
+                $str =~ /^\S+\W(\d+)/x;
+                $query_locus = "IGPOS$1";
+
+                # print "$query_locus\n";
+                # print $snp_class_name . "\n";
+                if ( exists $snp_igpos_list_h{$snp_class_name}{$query_locus} )
+                {
+
+                    $loc_snp_notation
+                        = $snp_igpos_list_h{$snp_class_name}{$query_locus}
+                        {'note'};
+                    push( @res_a, $loc_snp_notation );
+                    $res = join( ",", sort @res_a );
+                    $class_found = 1;
+                }
+            }
+            elsif ($+{ref_genome} ne "$ref_genome_name"
+                && $+{ref_genome} ne "" )
+            {
+                print colored ['bold red'],
+                    "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                last;
+            }
+
+     #         $loc_ref_name = $+{ref_genome};
+     #         $str =~ /^\S+\W+(?<genome_pos>\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
+
+            #         # $position_type= &check_position($+{genome_pos});
+            #         if ( length($2) == 1 && length($3) == 1 ) {
+
+#             # print "!\n" if ($1 =="1673425");
+#             # print &check_position($1). "\n";
+#             if ( $loc_ref_name ne $ref_genome_name ) {
+#                 print
+#                     "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+#                 last;
+#             }
+
+            #             print $+{genome_pos} . "\n";
+
+            #             # $class_query
+            #             #     = uc( $tmp{'locus'} . "_" . $tmp{'snp'} );
+
+            #         }
+        }
+        if ( $class_found == 0 ) {
+            print "\t---";
+        }
+        $class_query = "";
+        $file        = "";
+        $class_found = 0;
+        $snp_count   = 0;
+        print "\t$res\n";
+        $res = "";
+        close $fh;
+
+    }
+
+}
+
+sub use_snp_classification_coding {
     my @files       = glob('*.vcf');
     my $class_found = 0;
     my $class_query = "";
@@ -308,7 +420,7 @@ sub use_snp_classification {
     my $res              = "";
     my $loc_ref_name     = "";
     my $loc_snp_notation = "";
-    my $position_type="";
+    my $position_type    = "";
 
     foreach my $file (@files) {
         print "$file";
@@ -320,14 +432,15 @@ sub use_snp_classification {
             $str =~ /.*(?<ref_genome>$ref_genome_name)/x;
             $loc_ref_name = $+{ref_genome};
             $str =~ /^\S+\W+(?<genome_pos>\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
-            
-            # $position_type= &check_position($+{genome_pos});                        
-            if ( length($2) == 1 && length($3) == 1) {
+
+            # $position_type= &check_position($+{genome_pos});
+            if ( length($2) == 1 && length($3) == 1 ) {
+
                 # print "!\n" if ($1 =="1673425");
                 # print &check_position($1). "\n";
                 my %tmp = &get_locus_info( $+{genome_pos}, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print
+                    print colored ['bold red'],
                         "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -343,7 +456,7 @@ sub use_snp_classification {
                     $query_snp   = uc( $tmp{'snp'} );
 
                     # print "$class_query\n";
-                    $loc_snp_notation = &get_snp_notation(
+                    $loc_snp_notation = &load_coding_snp(
                         $options{snp_list},
                         $position_type,
                         $query_locus,
@@ -354,9 +467,10 @@ sub use_snp_classification {
                         $tmp{'ref_aa_short'}
                             . $tmp{'aa_pos'}
                             . $tmp{'alt_aa_short'},
-                        $tmp{'ref_aa_long'}
-                            . $tmp{'aa_pos'}
-                            . $tmp{'alt_aa_long'},
+                        uc(       $tmp{'ref_aa_long'}
+                                . $tmp{'aa_pos'}
+                                . $tmp{'alt_aa_long'}
+                        ),
                         $tmp{'snp'}
 
                     );
@@ -434,7 +548,8 @@ sub annotate_vcf_formatted {
         if ( length($2) == 1 && length($3) == 1 ) {
             my %tmp = &get_locus_info( $1, $3 );
             if ( $loc_ref_name ne $ref_genome_name ) {
-                print "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                print colored ['bold red'],
+                    "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                 exit;
             }
 
@@ -456,7 +571,8 @@ sub annotate_vcf_formatted {
                 }
                 elsif ( $options{action} eq "annotation.3" ) {
 
-                    $loc_AACI_flag  = &calc_aa_change_info( $tmp{'ref_aa_long'},
+                    $loc_AACI_flag
+                        = &calc_aa_change_info( $tmp{'ref_aa_long'},
                         $tmp{'alt_aa_long'}, $tmp{'snp_type'} );
 
                     $snp_per_gene_h{$loc_locus_name}{$loc_snp_pos}
@@ -531,7 +647,7 @@ sub find_uniq_genes {
 
                 # my %tmp = &get_locus_info( $1, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print
+                    print colored ['bold red'],
                         "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -622,7 +738,7 @@ sub find_uniq_genes_formated {
 
                 # my %tmp = &get_locus_info( $1, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print
+                    print colored ['bold red'],
                         "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -697,11 +813,12 @@ sub find_uniq_genes_formated {
     }
 
     my $duration = time - $start;
-    print "Execution time: $duration s\n";
+
+    # print "Execution time: $duration s\n";
 
 }
 
-sub test3 {
+sub compare_files_by_snp {
     my @files       = glob('*.vcf');
     my $count_f     = @files;       # считаем их количество
     my $class_found = 0;
@@ -715,7 +832,7 @@ sub test3 {
     my $loc_ref_name = "";
     my %all_snp_h;
     my @results_a;
-    my %results_h;
+    my %results_h;   
 
     # my %results_files_h;
     # my %snp2seq_h;
@@ -724,6 +841,7 @@ sub test3 {
 
     # my $th=10;
     # $th=(@files/2);
+    $options{snp_th} = 20 if ( $options{snp_th} eq "" );
     foreach my $file (@files) {
         $filename = $file;
 
@@ -740,31 +858,34 @@ sub test3 {
 
                 # my %tmp = &get_locus_info( $1, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print
+                    print colored ['bold red'],
                         "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
                 $all_snp_h{$1}{'pos'} = "$1";
-                $all_snp_h{$1}{'file'} .= "$file\t";
+                $all_snp_h{$1}{'file'} .= "$file,";
 
                 # $all_snp_h{$1}{'full'}     .= "$1\t$3\t$file\n";
-                $all_snp_h{$1}{'alt_list'} .= "$3\t";
+                $all_snp_h{$1}{'alt_list'} .= "$3,";
                 $all_snp_h{$1}{'alt'} = "$3";
 
             }
 
         }
-        close $fh;
 
+        close $fh;        
     }
-    foreach my $key ( sort keys %all_snp_h ) {
+    foreach my $key ( sort keys %all_snp_h ) {        
         my $files_per_snp_size;
-        my @filenames_a = split /\t/, $all_snp_h{$key}{'file'};
-        my @alts        = split /\t/, $all_snp_h{$key}{'alt_list'};
+        my @filenames_a = split /\,/, $all_snp_h{$key}{'file'};
+        my @diff_files=array_diff(@files,@filenames_a);       
+        my @alts        = split /\,/, $all_snp_h{$key}{'alt_list'};
         my $alt = $all_snp_h{$key}{'alt'};
         $files_per_snp_size = @filenames_a;
+        $results_h{$key}{'nf'}  = join(',',@diff_files);
+        $results_h{$key}{'nf_count'}  = @diff_files;
 
-        if ( $files_per_snp_size > 20 ) {
+        if ( $files_per_snp_size >= $options{'snp_th'} ) {
             $results_h{$key}{'count'}     = $files_per_snp_size;
             $results_h{$key}{'file_list'} = $all_snp_h{$key}{'file'};
             $results_h{$key}{'alt'}       = $alt;
@@ -785,12 +906,26 @@ sub test3 {
             && $tmp{'alt_aa_long'} ne 'BAD_CODON'
             && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
         {
-            print
-                "$key\n\t$tmp{'locus'} $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n\t\t"
-                . $results_h{$key}{'count'} . "/"
-                . scalar(@files)
-                . "\n\t\t\t"
+            if ($options{color} == 1) {
+            print colored ['bold yellow'], "-" x 30  . "\nSNP_POS:\n\t $key";
+            print colored ['bold blue'],
+                "\nLOCUS:\n\t $tmp{'locus'} $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
+            # print colored ['bold yellow'], "FOUND: " . $results_h{$key}{'count'} . "/"
+            #     . scalar(@files);
+                print colored ['bold green'], "FOUND_IN (" . $results_h{$key}{'count'} . "/" . scalar(@files) .  "):\n\t"
                 . $results_h{$key}{'file_list'} . "\n";
+                print colored ['bold red'], 
+                "NOT_FOUND_IN (" . $results_h{$key}{'nf_count'} . "/" . scalar(@files) .  "):\n\t" .  $results_h{$key}{'nf'}  . "\n" ;
+                }
+                else 
+                {
+                    print "-" x 30  . "\nSNP_POS:\n\t $key"             
+                . "\nLOCUS:\n\t $tmp{'locus'} $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n"            
+               . "FOUND_IN (" . $results_h{$key}{'count'} . "/" . scalar(@files) .  "):\n\t"
+                . $results_h{$key}{'file_list'} . "\n"                
+                . "NOT_FOUND_IN (" . $results_h{$key}{'nf_count'} . "/" . scalar(@files) . "):\n\t" .  $results_h{$key}{'nf'}  . "\n" ;
+                }
+                
 
            # my @loc_files_list = split( " ", $results_h{$key}{'file_list'} );
            # foreach my $file_key ( sort @files ) {
@@ -808,7 +943,8 @@ sub test3 {
 #     print "$key\n\t$results_files_h{$key}{'pos'}\n\t\t$results_files_h{$key}{'files'}\n";
 # }
     my $duration = time - $start;
-    print "Execution time: $duration s\n";
+
+    # print "Execution time: $duration s\n";
 
 }
 
@@ -998,8 +1134,10 @@ sub test5 {
 }
 
 sub get_locus_info {
-    my $loc_snp_pos    = shift;
-    my $loc_alt        = shift;
+
+    # my $loc_snp_pos    = shift;
+    # my $loc_alt        = shift;
+    my ( $loc_snp_pos, $loc_alt ) = @_;
     my $loc_locus_name = "";
     my %locus_info_h;
     my $snp_gene_pos;
@@ -1107,19 +1245,18 @@ sub get_locus_name {
 }
 
 sub check_position {
-    my $loc_snp_pos    = shift;    
-    my $type_pos="";
+    my $loc_snp_pos = shift;
+    my $type_pos    = "";
 
     foreach my $key ( keys %database ) {
-        if ($loc_snp_pos > scalar $database{$key}{'start'}
+        if (   $loc_snp_pos > scalar $database{$key}{'start'}
             && $loc_snp_pos < scalar $database{$key}{'end'} )
         {
-            $type_pos="coding";
+            $type_pos = "coding";
             last;
         }
-        else
-        {
-            $type_pos="intergenic";
+        else {
+            $type_pos = "intergenic";
         }
 
     }
@@ -1225,9 +1362,11 @@ sub calculate_grantham_matrix {
 }
 
 sub calc_aa_change_info {
-    my $ref_aa_long   = shift;
-    my $alt_aa_long   = shift;
-    my $type          = shift;
+
+    # my $ref_aa_long   = shift;
+    # my $alt_aa_long   = shift;
+    # my $type          = shift;
+    my ( $ref_aa_long, $alt_aa_long, $type ) = @_;
     my $loc_AACI_flag = "---";
     my $loc_AACI;
     my $AACI;
@@ -1296,28 +1435,32 @@ sub check_snp_notation {
     }
 }
 
-sub get_snp_notation {
-    my $snp_class_name = shift;
-    my $position_type=shift;
-    my $query_locus    = shift;
-    my $query_snp      = shift;
-    my $position       = shift;
-    my $aa             = shift;
-    my $aa_long        = uc(shift);
-    my $snp            = shift;
+sub load_coding_snp {
+
+    # my $snp_class_name = shift;
+    # my $position_type  = shift;
+    # my $query_locus    = shift;
+    # my $query_snp      = shift;
+    # my $position       = shift;
+    # my $aa             = shift;
+    # my $aa_long        = uc(shift);
+    # my $snp            = shift;
+
+    my ( $snp_class_name, $position_type, $query_locus, $query_snp,
+        $position, $aa, $aa_long, $snp )
+        = @_;
 
     my ($position_extracted) = $position =~ /^(\d+)/;
     my ($aa_reformat)        = $aa_long =~ /^(\D{3})(\d+)(\D{3})/;
-    my ($aa_codon_pos)        = $aa_long =~ /^\D{3}(\d+)\D{3}/;
+    my ($aa_codon_pos)       = $aa_long =~ /^\D{3}(\d+)\D{3}/;
     my $aa_long_genome_pos   = "$position_extracted\_$1>$3";
     my $pos_check            = "POS$position_extracted";
-    my $codon_check="CODON$aa_codon_pos";
-    
+    my $codon_check          = "CODON$aa_codon_pos";
 
     # print "$aa_long_genome_pos\n";
 
     # if ($position eq "489935_G>C"){print "!!!!!\n"};
-    # my $snp_class_type = $snp_list_type_h{$options{snp_list}};    
+    # my $snp_class_type = $snp_list_type_h{$options{snp_list}};
     if ( exists $snp_list_h{$snp_class_name}{$query_locus}{$query_snp} ) {
         return $snp_list_h{$snp_class_name}{$query_locus}{$query_snp}{'note'};
     }
@@ -1335,8 +1478,8 @@ sub get_snp_notation {
         return $snp_list_h{$snp_class_name}{$query_locus}{$aa}{'note'};
     }
     if ( exists $snp_list_h{$snp_class_name}{$query_locus}{$codon_check} ) {
-        return $snp_list_h{$snp_class_name}{$query_locus}{$codon_check}{'note'}
-        . "\ ($query_locus\_$snp\_$aa_long)";
+        return $snp_list_h{$snp_class_name}{$query_locus}{$codon_check}
+            {'note'} . "\ ($query_locus\_$position\_$snp\_$aa_long)";
     }
     if ( exists $snp_list_h{$snp_class_name}{$query_locus}{$aa_long} ) {
         return $snp_list_h{$snp_class_name}{$query_locus}{$aa_long}{'note'};
@@ -1364,5 +1507,4 @@ sub get_snp_notation {
   #     return $snp_list_h{$snp_class_name}{$query_locus}{$aa_long}{'note'};
   # }
 }
-
 
