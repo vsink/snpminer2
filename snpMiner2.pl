@@ -10,8 +10,10 @@ use Data::Dumper;
 use Carp;
 use IO::Compress::RawDeflate qw(rawdeflate $RawDeflateError);
 use IO::Uncompress::RawInflate qw(rawinflate $RawInflateError);
-use Array::Utils qw(:all);
+use List::Compare;
 use Term::ANSIColor;
+use Cwd;
+use List::Util qw(first max maxstr min minstr reduce shuffle sum);
 
 # use Benchmark qw(:all) ;
 # my $t0 = Benchmark->new;
@@ -23,7 +25,7 @@ my $db_version          = "";
 my $snp_list_exists     = 0;
 my $ref_genome_name     = "";
 my $organism_name       = "";
-my $version             = "0.2.1";
+my $version             = "0.2.2";
 my $about_msg
     = "Program: snpMiner2 (Tool for analysis of variable call format files)\n";
 
@@ -37,14 +39,15 @@ my %aa_hash;
 my %snp_list_h;
 my %snp_igpos_list_h;
 
-# my %snps_h;
-my %options;
+my %options;    # options hash
 
 GetOptions(
-    \%options, 'db=s',   'action=s', 'snp_list=s',
-    'vcf=s',   "about!", "color",    'help',
-    'snp_th=s'
+    \%options,  'db=s',   'action=s', 'snp_list=s',
+    'vcf=s',    "about!", "color",    'help',
+    'snp_th=s', 'list=s', "DP=s",     "target=s", "tang_th=s"
 );
+
+&show_help( "verbose" => 99, -utf8 ) if $options{help};
 
 if ( $options{action} eq "rf" ) {
     &load_db( $options{db} );
@@ -98,7 +101,9 @@ elsif ($options{action} eq "annotation.2" && $options{vcf} ne ""
 }
 elsif ($options{action} eq "uniq"
     || $options{action} eq "uniq.1"
-    || $options{action} eq "uniq.2" )
+    || $options{action} eq "uniq.2"
+    || $options{action} eq "uniq.6"
+    || $options{action} eq "uniq.7" )
 {
 
     &load_db( $options{db} );
@@ -106,18 +111,27 @@ elsif ($options{action} eq "uniq"
     &find_uniq_genes( $options{vcf} );
 
 }
-elsif ( $options{action} eq "uniq.3" ) {
+elsif ($options{action} eq "uniq.3"
+    || $options{action} eq "uniq.4" )
+{
 
     &load_db( $options{db} );
 
     &find_uniq_genes_formated( $options{vcf} );
 
 }
-elsif ( $options{action} eq "uniq.4" ) {
+elsif ( $options{action} eq "uniq.5" ) {
 
     &load_db( $options{db} );
 
     &compare_files_by_snp( $options{vcf} );
+
+}
+elsif ( $options{action} eq "check_list" ) {
+
+    &load_db( $options{db} );
+
+    &compare_list_by_snp( $options{vcf} );
 
 }
 elsif ( $options{action} eq "t4" ) {
@@ -147,6 +161,11 @@ if ( $options{about} ) {
 #         . "-" x 60 . "\n";
 # }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub write_dump {
 
     # write loaded db as hash-dump ({db_name}.dump)
@@ -163,6 +182,11 @@ sub write_dump {
     # print
 
 }
+
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
 
 sub codon2aa {
 
@@ -192,6 +216,11 @@ sub aa_decode {
 
 }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub load_db {
 
     #load genome database created by gb2db.pl
@@ -211,14 +240,24 @@ sub load_db {
     $db_version      = $database{options}{version};
     $ref_genome_name = $database{options}{reference};
     $organism_name   = $database{options}{organism_name};
-    $snp_list_exists = scalar $database{options}{snp_list_exists};
+    $snp_list_exists
+        = scalar $database{options}{snp_list_exists}; #snp_list existance flag
+    my $igpos_list_exists = scalar $database{options}{igpos_list_exists}
+        ;                                             #snp_list existance flag
     if ( $snp_list_exists == 1 ) {
-        %snp_list_h       = %{ $hash_ref->{dict}{snp_list}{coding} };
-        %snp_igpos_list_h = %{ $hash_ref->{dict}{snp_list}{intergenic} };
+        %snp_list_h = %{ $hash_ref->{dict}{snp_list}{coding} };    # snp_list
+        if ( $igpos_list_exists == 1 ) {
+            %snp_igpos_list_h = %{ $hash_ref->{dict}{snp_list}{intergenic} }
+                ;    # intergenic positions list
+        }
     }
 
 }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
 sub annotate_vcf {
     my $loc_file_in   = shift;
     my $AACI          = "";
@@ -322,6 +361,11 @@ sub annotate_vcf {
 
 }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub use_snp_classification_intergenic {
     my $snp_class_name = shift;
     my @files          = glob('*.vcf');
@@ -407,6 +451,11 @@ sub use_snp_classification_intergenic {
     }
 
 }
+
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
 
 sub use_snp_classification_coding {
     my @files       = glob('*.vcf');
@@ -531,6 +580,11 @@ sub use_snp_classification_coding {
 
 }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub annotate_vcf_formatted {
     my $loc_file_in = shift;
     my %snp_per_gene_h;
@@ -615,6 +669,11 @@ sub annotate_vcf_formatted {
 
 }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub find_uniq_genes {
     my @files       = glob('*.vcf');
     my $count_f     = @files;       # считаем их количество
@@ -654,6 +713,7 @@ sub find_uniq_genes {
                 $all_snp_h{$1}{'file'}     .= "$file\t";
                 $all_snp_h{$1}{'alt_list'} .= "$3\t";
                 $all_snp_h{$1}{'alt'} = "$3";
+                $all_snp_h{$1}{'DP'} .= "$4\t";
 
             }
 
@@ -665,16 +725,26 @@ sub find_uniq_genes {
         my $files_per_snp_size;
         my @filenames_a = split /\t/, $all_snp_h{$key}{'file'};
         my @alts        = split /\t/, $all_snp_h{$key}{'alt_list'};
+        my @DPs=split /\t/, $all_snp_h{$key}{'DP'};        
         my $alt = $all_snp_h{$key}{'alt'};
+        my $loc_AACI_flag="";
         $files_per_snp_size = @filenames_a;
+        my $DP_min = min @DPs;
+        my $DP_max = max @DPs;
+        my $DP_average_raw = (sum @DPs)/$files_per_snp_size;
+        my $DP_average = sprintf("%.1i", $DP_average_raw);
         if ( $files_per_snp_size == $count_f ) {
             my %tmp = &get_locus_info( $key, $alt );
-            if (   $tmp{'locus'} ne ""
+            
+            if ( $tmp{'locus'} ne ""
                 && $tmp{'alt_aa_long'} ne 'STOP'
                 && $tmp{'ref_aa_long'} ne 'STOP'
                 && $tmp{'alt_aa_long'} ne 'BAD_CODON'
                 && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
             {
+                $loc_AACI_flag
+                    = &calc_aa_change_info( $tmp{'ref_aa_long'},
+                    $tmp{'alt_aa_long'}, $tmp{'snp_type'} );
                 if ( $options{action} eq "uniq" ) {
                     push( @results_a,
                         "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\t$files_per_snp_size/$count_f\n"
@@ -683,6 +753,18 @@ sub find_uniq_genes {
                 elsif ( $options{action} eq "uniq.1" ) {
                     push( @results_a,
                         "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\n"
+                    );
+
+                }
+                elsif ( $options{action} eq "uniq.6" ) {
+                    push( @results_a,
+                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$loc_AACI_flag$tmp{'product'}\t\n"
+                    );
+
+                }
+                elsif ( $options{action} eq "uniq.7" ) {
+                    push( @results_a,
+                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$loc_AACI_flag$tmp{'product'}\t" . "DP:" . $DP_min . "-" . $DP_max . " (Avg: $DP_average)" . "\n"
                     );
 
                 }
@@ -704,6 +786,11 @@ sub find_uniq_genes {
     # my $duration = time - $start;
     # print "Execution time: $duration s\n";
 }
+
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
 
 sub find_uniq_genes_formated {
     my @files       = glob('*.vcf');
@@ -775,8 +862,14 @@ sub find_uniq_genes_formated {
                 my $loc_AACI_flag
                     = &calc_aa_change_info( $tmp{'ref_aa_long'},
                     $tmp{'alt_aa_long'}, $tmp{'snp_type'} );
-                $snp_per_gene_h{$loc_locus_name}{$loc_snp_pos}
-                    = "\t$loc_snp_pos\t$loc_snp\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$loc_AACI_flag\t$files_per_snp_size/$count_f";
+                if ( $options{action} eq "uniq.3" ) {
+                    $snp_per_gene_h{$loc_locus_name}{$loc_snp_pos}
+                        = "\t$loc_snp_pos\t$loc_snp\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$loc_AACI_flag\t$files_per_snp_size/$count_f";
+                }
+                elsif ( $options{action} eq "uniq.4" ) {
+                    $snp_per_gene_h{$loc_locus_name}{$loc_snp_pos}
+                        = "\t$loc_snp_pos\t$loc_snp\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$loc_AACI_flag";
+                }
 
             }
 
@@ -818,6 +911,11 @@ sub find_uniq_genes_formated {
 
 }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub compare_files_by_snp {
     my @files       = glob('*.vcf');
     my $count_f     = @files;       # считаем их количество
@@ -832,7 +930,7 @@ sub compare_files_by_snp {
     my $loc_ref_name = "";
     my %all_snp_h;
     my @results_a;
-    my %results_h;   
+    my %results_h;
 
     # my %results_files_h;
     # my %snp2seq_h;
@@ -873,17 +971,21 @@ sub compare_files_by_snp {
 
         }
 
-        close $fh;        
+        close $fh;
     }
-    foreach my $key ( sort keys %all_snp_h ) {        
+    foreach my $key ( sort keys %all_snp_h ) {
         my $files_per_snp_size;
         my @filenames_a = split /\,/, $all_snp_h{$key}{'file'};
-        my @diff_files=array_diff(@files,@filenames_a);       
-        my @alts        = split /\,/, $all_snp_h{$key}{'alt_list'};
-        my $alt = $all_snp_h{$key}{'alt'};
+
+        my $lc           = List::Compare->new( \@files, \@filenames_a );
+        my @intersection = $lc->get_symmetric_difference();
+        my @alts         = split /\,/, $all_snp_h{$key}{'alt_list'};
+        my $alt          = $all_snp_h{$key}{'alt'};
+        my $target_a_size;
+        my @target_a;
         $files_per_snp_size = @filenames_a;
-        $results_h{$key}{'nf'}  = join(',',@diff_files);
-        $results_h{$key}{'nf_count'}  = @diff_files;
+        $results_h{$key}{'nf'} = join( ',', @intersection );
+        $results_h{$key}{'nf_count'} = @intersection;
 
         if ( $files_per_snp_size >= $options{'snp_th'} ) {
             $results_h{$key}{'count'}     = $files_per_snp_size;
@@ -906,26 +1008,287 @@ sub compare_files_by_snp {
             && $tmp{'alt_aa_long'} ne 'BAD_CODON'
             && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
         {
-            if ($options{color} == 1) {
-            print colored ['bold yellow'], "-" x 30  . "\nSNP_POS:\n\t $key";
-            print colored ['bold blue'],
-                "\nLOCUS:\n\t $tmp{'locus'} $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
-            # print colored ['bold yellow'], "FOUND: " . $results_h{$key}{'count'} . "/"
-            #     . scalar(@files);
-                print colored ['bold green'], "FOUND_IN (" . $results_h{$key}{'count'} . "/" . scalar(@files) .  "):\n\t"
-                . $results_h{$key}{'file_list'} . "\n";
-                print colored ['bold red'], 
-                "NOT_FOUND_IN (" . $results_h{$key}{'nf_count'} . "/" . scalar(@files) .  "):\n\t" .  $results_h{$key}{'nf'}  . "\n" ;
+            # if ( $options{color} == 1 ) {
+           
+
+  # print colored ['bold yellow'], "FOUND: " . $results_h{$key}{'count'} . "/"
+  #     . scalar(@files);
+            my @filenames_a = split /\,/, $all_snp_h{$key}{'file'};
+            
+            if ( $options{target} ne "" ) {
+                if ( my ($matched) = grep $_ eq $options{target}, @filenames_a ) {
+                     print colored ['bold yellow'], "\n" . "-" x 50;
+
+            # . "\nSNP_POS:\n\t $key";
+            print colored ['bold blue'], "\nLOCUS:\n\t";
+            print
+                "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
+                    # print "***: $matched\n";
+                    print colored ['bold green'],
+                  "FOUND_IN_W_TARGET ("
+                . $results_h{$key}{'count'} . "/"
+                . scalar(@files)
+                . "):\n\t";
+                print $results_h{$key}{'file_list'} . "\n";
+                if ( $results_h{$key}{'nf_count'} > 0 ) {
+                print colored ['bold red'],
+                      "NOT_FOUND_IN ("
+                    . $results_h{$key}{'nf_count'} . "/"
+                    . scalar(@files)
+                    . "):\n\t";
+                print $results_h{$key}{'nf'};
+            }
                 }
-                else 
-                {
-                    print "-" x 30  . "\nSNP_POS:\n\t $key"             
-                . "\nLOCUS:\n\t $tmp{'locus'} $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n"            
-               . "FOUND_IN (" . $results_h{$key}{'count'} . "/" . scalar(@files) .  "):\n\t"
-                . $results_h{$key}{'file_list'} . "\n"                
-                . "NOT_FOUND_IN (" . $results_h{$key}{'nf_count'} . "/" . scalar(@files) . "):\n\t" .  $results_h{$key}{'nf'}  . "\n" ;
+            }
+            else
+            {
+                 print colored ['bold yellow'], "\n" . "-" x 50;
+
+            # . "\nSNP_POS:\n\t $key";
+            print colored ['bold blue'], "\nLOCUS:\n\t";
+            print
+                "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
+                  print colored ['bold green'],
+                  "FOUND_IN ("
+                . $results_h{$key}{'count'} . "/"
+                . scalar(@files)
+                . "):\n\t";
+                print $results_h{$key}{'file_list'} . "\n";
+                if ( $results_h{$key}{'nf_count'} > 0 ) {
+                print colored ['bold red'],
+                      "NOT_FOUND_IN ("
+                    . $results_h{$key}{'nf_count'} . "/"
+                    . scalar(@files)
+                    . "):\n\t";
+                print $results_h{$key}{'nf'};   
+            }
+        }
+
+            
+
+# }
+# else {
+#     print "\n"
+#         . "-" x 50
+#         . "\nLOCUS:\n\t $tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n"
+#         . "FOUND_IN ("
+#         . $results_h{$key}{'count'} . "/"
+#         . scalar(@files)
+#         . "):\n\t"
+#         . $results_h{$key}{'file_list'} . "\n";
+#     print "NOT_FOUND_IN ("
+#         . $results_h{$key}{'nf_count'} . "/"
+#         . scalar(@files)
+#         . "):\n\t"
+#         . $results_h{$key}{'nf'}
+#         if $results_h{$key}{'nf_count'} > 0;
+# }
+
+           # my @loc_files_list = split( " ", $results_h{$key}{'file_list'} );
+           # foreach my $file_key ( sort @files ) {
+           #     foreach my $file_key1 ( sort @loc_files_list ) {
+           #         print "$file_key\t$file_key1";
+           #     }
+           # }
+
+            # print $results_h{$key}{'full'};
+
+        }
+    }
+
+# foreach my $key ( sort keys %results_files_h ) {
+#     print "$key\n\t$results_files_h{$key}{'pos'}\n\t\t$results_files_h{$key}{'files'}\n";
+# }
+    my $duration = time - $start;
+
+    # print "Execution time: $duration s\n";
+
+}
+
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
+sub compare_list_by_snp {
+    my @files       = glob('*.vcf');
+    my $count_f     = @files;       # считаем их количество
+    my $class_found = 0;
+    my $class_query = "";
+    my $query_locus = "";
+    my $query_snp   = "";
+    my @class_a;
+    my $snp_count    = 0;
+    my $tab          = "";
+    my $res          = "";
+    my $loc_ref_name = "";
+    my %all_snp_h;
+    my @results_a;
+    my %results_h;
+    my @filelist_a;
+    my $filelist_joined = "";
+    my $files_joied     = "";
+    my $dir             = getcwd;
+
+    # my %results_files_h;
+    # my %snp2seq_h;
+    my $filename = "";
+    my $start    = time;
+
+    # my $th=10;
+    # $th=(@files/2);
+    $options{snp_th} = 20 if ( $options{snp_th} eq "" );
+    if ( $options{list} eq "" ) {
+        print colored ['bold red'],
+            "Check list is not found! Use option --list <FILE> to load filelist!\n";
+        print $options{list};
+        exit;
+    }
+
+    open( my $fh, "<", $options{list} )
+        or croak "cannot open file!";
+
+    while (<$fh>) {
+        my ($loc_fname) = $_ =~ /(^\S+)/;
+
+        # chomp;
+        if ( -e "$dir/$loc_fname" ) {
+            print uc($loc_fname) . "\t[ ";
+            print colored ['bold green'], "OK";
+            print " ]\n";
+            push( @filelist_a, $loc_fname );
+        }
+        else {
+            print uc($loc_fname) . "\t[ ";
+            print colored ['bold red'], "NOT_FOUND";
+            print " ]\n";
+        }
+    }
+    close $fh;
+    $filelist_joined = join( ',', @filelist_a );
+    $files_joied     = join( ',', @files );
+
+    # exit;
+
+    foreach my $file (@files) {
+        $filename = $file;
+
+        # print "$file";
+        open( my $fh, "<", $file )
+            or croak "cannot open < $file: $!";
+        while (<$fh>) {
+            my $str = "$_";
+            $str =~ /.*($ref_genome_name)/x;
+            $loc_ref_name = $1;
+            $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
+
+            if ( length($2) == 1 && length($3) == 1 ) {
+
+                # my %tmp = &get_locus_info( $1, $3 );
+                if ( $loc_ref_name ne $ref_genome_name ) {
+                    print colored ['bold red'],
+                        "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                    last;
                 }
-                
+                $all_snp_h{$1}{'pos'} = "$1";
+                $all_snp_h{$1}{'file'} .= "$file,";
+
+                # $all_snp_h{$1}{'full'}     .= "$1\t$3\t$file\n";
+                $all_snp_h{$1}{'alt_list'} .= "$3,";
+                $all_snp_h{$1}{'alt'} = "$3";
+
+            }
+
+        }
+
+        close $fh;
+    }
+    foreach my $key ( sort keys %all_snp_h ) {
+        my $files_per_snp_size;
+        my @filenames_a = split /\,/, $all_snp_h{$key}{'file'};
+        my @alts        = split /\,/, $all_snp_h{$key}{'alt_list'};
+        my $alt          = $all_snp_h{$key}{'alt'};
+        my $lc           = List::Compare->new( \@filelist_a, \@filenames_a );
+        my $lc_all       = List::Compare->new( \@filenames_a, \@files );
+        my @intersection = $lc->get_intersection();
+        my @complement_files = $lc_all->get_complement();
+        $files_per_snp_size = @filenames_a;
+        $results_h{$key}{'intersection'} = join( ',', @intersection );
+        $results_h{$key}{'intersection_count'} = @intersection;
+        $results_h{$key}{'not_equal'}       = join( ',', @complement_files );
+        $results_h{$key}{'not_equal_count'} = @complement_files;
+
+        if ( $files_per_snp_size >= $options{'snp_th'} ) {
+            $results_h{$key}{'count'}     = $files_per_snp_size;
+            $results_h{$key}{'file_list'} = $all_snp_h{$key}{'file'};
+            $results_h{$key}{'alt'}       = $alt;
+
+    # $results_h{$key}{'full'}=$all_snp_h{$key}{'full'};
+    # $results_files_h{$files_per_snp_size}{'files'}=$all_snp_h{$key}{'file'};
+    # $results_files_h{$files_per_snp_size}{'pos'}=$key;
+    # # $results_files_h{$files_per_snp_size}{$key}=$all_snp_h{$key}{'file'} ;
+        }
+
+    }
+
+    foreach my $key ( sort keys %results_h ) {
+        my %tmp = &get_locus_info( $key, $results_h{$key}{'alt'} );
+        if (   $tmp{'locus'} ne ""
+            && $tmp{'alt_aa_long'} ne 'STOP'
+            && $tmp{'ref_aa_long'} ne 'STOP'
+            && $tmp{'alt_aa_long'} ne 'BAD_CODON'
+            && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
+        {
+            # if ( $options{color} == 1 ) {
+            print colored ['bold yellow'], "\n" . "-" x 50;
+
+            # . "\nSNP_POS:\n\t $key";
+            print colored ['bold blue'], "\nLOCUS:\n\t";
+            print
+                "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
+
+  # print colored ['bold yellow'], "FOUND: " . $results_h{$key}{'count'} . "/"
+  #     . scalar(@files);
+            print colored ['bold cyan'],
+                "FILES (" . scalar(@files) . "):\n\t";
+            print "$files_joied\n";
+            print colored ['bold yellow'],
+                "FILE_LIST (" . scalar(@filelist_a) . "):\n\t";
+            print "$filelist_joined\n";
+            print colored ['bold green'],
+                  "FOUND ("
+                . $results_h{$key}{'intersection_count'} . "/"
+                . scalar(@filelist_a) . "/"
+                . scalar(@files)
+                . "):\n\t";
+            print $results_h{$key}{'intersection'} . "\n";
+            print colored ['bold red'],
+                  "NOT_FOUND_IN_FILES ("
+                . $results_h{$key}{'not_equal_count'} . "/"
+                . scalar(@files)
+                . "):\n\t";
+            print $results_h{$key}{'not_equal'};
+
+            # if ($results_h{$key}{'nf_count'} > 0 ) {
+
+# }
+# }
+# else {
+#     print "\n"
+#         . "-" x 50
+#         . "\nLOCUS:\n\t $tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n"
+#         . "FOUND_IN ("
+#         . $results_h{$key}{'count'} . "/"
+#         . scalar(@files)
+#         . "):\n\t"
+#         . $results_h{$key}{'file_list'} . "\n";
+#     print "NOT_FOUND_IN ("
+#         . $results_h{$key}{'nf_count'} . "/"
+#         . scalar(@files)
+#         . "):\n\t"
+#         . $results_h{$key}{'nf'}
+#         if $results_h{$key}{'nf_count'} > 0;
+# }
 
            # my @loc_files_list = split( " ", $results_h{$key}{'file_list'} );
            # foreach my $file_key ( sort @files ) {
@@ -1078,7 +1441,9 @@ sub test5 {
         }
         close $fh;
         $char_count = 0;
-        print "$file...OK\n";
+        print "$file\t[ ";
+        print colored ['bold green'], "OK";
+        print " ]\n";
 
     }
     print "-" x 50 . "\n";
@@ -1132,6 +1497,11 @@ sub test5 {
 
     # print "Execution time: $duration s\n";
 }
+
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
 
 sub get_locus_info {
 
@@ -1225,6 +1595,11 @@ sub get_locus_info {
     }
 }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub get_locus_name {
     my $loc_snp_pos    = shift;
     my $loc_locus_name = "";
@@ -1266,6 +1641,11 @@ sub check_position {
     }
 }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub calcutalte_tv_ti {
     my $nc_ref     = uc(shift);
     my $nc_alt     = uc(shift);
@@ -1290,6 +1670,11 @@ sub calcutalte_tv_ti {
 
 }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub calcutalte_tang_index {
 
     my $aa_ref = &aa_decode(shift);
@@ -1307,6 +1692,11 @@ sub calcutalte_tang_index {
     }
 
 }
+
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
 
 sub calcutalte_deltaH {
 
@@ -1342,6 +1732,11 @@ sub calcutalte_deltaH {
 
 # }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub calculate_grantham_matrix {
     my $aa_ref = &aa_decode(shift);
     my $aa_alt = &aa_decode(shift);
@@ -1361,6 +1756,11 @@ sub calculate_grantham_matrix {
     }
 }
 
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub calc_aa_change_info {
 
     # my $ref_aa_long   = shift;
@@ -1370,12 +1770,19 @@ sub calc_aa_change_info {
     my $loc_AACI_flag = "---";
     my $loc_AACI;
     my $AACI;
-    if ( $type eq "missense" ) {
+    my $loc_tang_th;
+    if ($options{tang_th} ne ""){
+        $loc_tang_th=$options{tang_th};
+    }
+    else {
+        $loc_tang_th=0.5;
+    }
+    if ( $type eq "missense") {
         my $loc_tang_index
-            = calcutalte_tang_index( $ref_aa_long, $alt_aa_long );
+            = calcutalte_tang_index( $ref_aa_long, $alt_aa_long );            
         my $loc_deltaH = calcutalte_deltaH( $ref_aa_long, $alt_aa_long );
         my $loc_GD = calculate_grantham_matrix( $ref_aa_long, $alt_aa_long );
-        if ( $loc_tang_index < 0.5 ) {
+        if ( $loc_tang_index < $loc_tang_th ) {
             $loc_AACI++;
             substr $loc_AACI_flag, 0, 1, "+";
         }
@@ -1401,6 +1808,11 @@ sub calc_aa_change_info {
     }
 
 }
+
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
 
 sub check_snp_notation {
     my $mut = shift;
@@ -1434,6 +1846,11 @@ sub check_snp_notation {
         }
     }
 }
+
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
 
 sub load_coding_snp {
 
@@ -1508,3 +1925,57 @@ sub load_coding_snp {
   # }
 }
 
+sub show_help {
+    print "Version: $version by Viacheslav Sinkov (vsinkov_at_gmail.com)\n\n";
+    pod2usage( "verbose" => 99, -utf8 );
+}
+
+__END__
+
+
+=encoding utf8
+
+
+Usage:   snpMiner2 -db <database name> -action <type of> <command> <options>
+
+=head1 -db
+
+The select of database filename created by gb2db.pl script.
+
+=over 20
+
+=back
+
+=head1 actions 
+
+=over 20
+
+=item B<annotation >  
+
+Description....
+
+
+=item B<uniq>  
+
+Description....
+
+=item B<check_snp >  
+
+Description....
+
+=back
+
+=head1 commands
+
+=over 20
+
+=item B<--vcf> <vcf file>   
+
+Description....
+
+=item B<--snp_list> <snp_list name>   
+
+Description....
+
+=back
+=cut
