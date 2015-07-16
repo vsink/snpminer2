@@ -42,9 +42,10 @@ my %snp_igpos_list_h;
 my %options;    # options hash
 
 GetOptions(
-    \%options,  'db=s',   'action=s', 'snp_list=s',
-    'vcf=s',    "about!", "color",    'help',
-    'snp_th=s', 'list=s', "DP=s",     "target=s", "tang_th=s"
+    \%options,   'db=s',   'action=s', 'snp_list=s',
+    'vcf=s',     "about!", "color",    'help',
+    'snp_th=s',  'list=s', "DP=s",     "target=s",
+    "tang_th=s", "locus=s"
 );
 
 &show_help( "verbose" => 99, -utf8 ) if $options{help};
@@ -146,6 +147,18 @@ elsif ( $options{action} eq "t5" || $options{action} eq "t5.1" ) {
     &load_db( $options{db} );
 
     &test5( $options{vcf} );
+
+}
+
+elsif ( $options{action} eq "info" ) {
+    if ( $options{locus} ne "" ) {
+        &load_db( $options{db} );
+        &get_information( $options{locus} );
+
+    }
+    else {
+        print "Use -locus <LOCUS NAME> option. \n";
+    }
 
 }
 
@@ -725,18 +738,19 @@ sub find_uniq_genes {
         my $files_per_snp_size;
         my @filenames_a = split /\t/, $all_snp_h{$key}{'file'};
         my @alts        = split /\t/, $all_snp_h{$key}{'alt_list'};
-        my @DPs=split /\t/, $all_snp_h{$key}{'DP'};        
-        my $alt = $all_snp_h{$key}{'alt'};
-        my $loc_AACI_flag="";
+        my @DPs         = split /\t/, $all_snp_h{$key}{'DP'};
+        my $alt           = $all_snp_h{$key}{'alt'};
+        my $loc_AACI_flag = "";
         $files_per_snp_size = @filenames_a;
-        my $DP_min = min @DPs;
-        my $DP_max = max @DPs;
-        my $DP_average_raw = (sum @DPs)/$files_per_snp_size;
-        my $DP_average = sprintf("%.1i", $DP_average_raw);
+        my $DP_min         = min @DPs;
+        my $DP_max         = max @DPs;
+        my $DP_average_raw = ( sum @DPs ) / $files_per_snp_size;
+        my $DP_average     = sprintf( "%.1i", $DP_average_raw );
+
         if ( $files_per_snp_size == $count_f ) {
             my %tmp = &get_locus_info( $key, $alt );
-            
-            if ( $tmp{'locus'} ne ""
+
+            if (   $tmp{'locus'} ne ""
                 && $tmp{'alt_aa_long'} ne 'STOP'
                 && $tmp{'ref_aa_long'} ne 'STOP'
                 && $tmp{'alt_aa_long'} ne 'BAD_CODON'
@@ -758,14 +772,18 @@ sub find_uniq_genes {
                 }
                 elsif ( $options{action} eq "uniq.6" ) {
                     push( @results_a,
-                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$loc_AACI_flag$tmp{'product'}\t\n"
+                        "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$loc_AACI_flag$tmp{'product'}\t\n"
                     );
 
                 }
                 elsif ( $options{action} eq "uniq.7" ) {
                     push( @results_a,
-                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$loc_AACI_flag$tmp{'product'}\t" . "DP:" . $DP_min . "-" . $DP_max . " (Avg: $DP_average)" . "\n"
-                    );
+                        "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$loc_AACI_flag$tmp{'product'}\t"
+                            . "DP:"
+                            . $DP_min . "-"
+                            . $DP_max
+                            . " (Avg: $DP_average)"
+                            . "\n" );
 
                 }
                 elsif ( $options{action} eq "uniq.2" ) {
@@ -1009,62 +1027,61 @@ sub compare_files_by_snp {
             && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
         {
             # if ( $options{color} == 1 ) {
-           
 
   # print colored ['bold yellow'], "FOUND: " . $results_h{$key}{'count'} . "/"
   #     . scalar(@files);
             my @filenames_a = split /\,/, $all_snp_h{$key}{'file'};
-            
-            if ( $options{target} ne "" ) {
-                if ( my ($matched) = grep $_ eq $options{target}, @filenames_a ) {
-                     print colored ['bold yellow'], "\n" . "-" x 50;
 
-            # . "\nSNP_POS:\n\t $key";
-            print colored ['bold blue'], "\nLOCUS:\n\t";
-            print
-                "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
+            if ( $options{target} ne "" ) {
+                if ( my ($matched) = grep $_ eq $options{target},
+                    @filenames_a )
+                {
+                    print colored ['bold yellow'], "\n" . "-" x 50;
+
+                    # . "\nSNP_POS:\n\t $key";
+                    print colored ['bold blue'], "\nLOCUS:\n\t";
+                    print
+                        "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
+
                     # print "***: $matched\n";
                     print colored ['bold green'],
-                  "FOUND_IN_W_TARGET ("
-                . $results_h{$key}{'count'} . "/"
-                . scalar(@files)
-                . "):\n\t";
-                print $results_h{$key}{'file_list'} . "\n";
-                if ( $results_h{$key}{'nf_count'} > 0 ) {
-                print colored ['bold red'],
-                      "NOT_FOUND_IN ("
-                    . $results_h{$key}{'nf_count'} . "/"
-                    . scalar(@files)
-                    . "):\n\t";
-                print $results_h{$key}{'nf'};
-            }
+                          "FOUND_IN_W_TARGET ("
+                        . $results_h{$key}{'count'} . "/"
+                        . scalar(@files)
+                        . "):\n\t";
+                    print $results_h{$key}{'file_list'} . "\n";
+                    if ( $results_h{$key}{'nf_count'} > 0 ) {
+                        print colored ['bold red'],
+                              "NOT_FOUND_IN ("
+                            . $results_h{$key}{'nf_count'} . "/"
+                            . scalar(@files)
+                            . "):\n\t";
+                        print $results_h{$key}{'nf'};
+                    }
                 }
             }
-            else
-            {
-                 print colored ['bold yellow'], "\n" . "-" x 50;
+            else {
+                print colored ['bold yellow'], "\n" . "-" x 50;
 
-            # . "\nSNP_POS:\n\t $key";
-            print colored ['bold blue'], "\nLOCUS:\n\t";
-            print
-                "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
-                  print colored ['bold green'],
-                  "FOUND_IN ("
-                . $results_h{$key}{'count'} . "/"
-                . scalar(@files)
-                . "):\n\t";
-                print $results_h{$key}{'file_list'} . "\n";
-                if ( $results_h{$key}{'nf_count'} > 0 ) {
-                print colored ['bold red'],
-                      "NOT_FOUND_IN ("
-                    . $results_h{$key}{'nf_count'} . "/"
+                # . "\nSNP_POS:\n\t $key";
+                print colored ['bold blue'], "\nLOCUS:\n\t";
+                print
+                    "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
+                print colored ['bold green'],
+                      "FOUND_IN ("
+                    . $results_h{$key}{'count'} . "/"
                     . scalar(@files)
                     . "):\n\t";
-                print $results_h{$key}{'nf'};   
+                print $results_h{$key}{'file_list'} . "\n";
+                if ( $results_h{$key}{'nf_count'} > 0 ) {
+                    print colored ['bold red'],
+                          "NOT_FOUND_IN ("
+                        . $results_h{$key}{'nf_count'} . "/"
+                        . scalar(@files)
+                        . "):\n\t";
+                    print $results_h{$key}{'nf'};
+                }
             }
-        }
-
-            
 
 # }
 # else {
@@ -1771,15 +1788,15 @@ sub calc_aa_change_info {
     my $loc_AACI;
     my $AACI;
     my $loc_tang_th;
-    if ($options{tang_th} ne ""){
-        $loc_tang_th=$options{tang_th};
+    if ( $options{tang_th} ne "" ) {
+        $loc_tang_th = $options{tang_th};
     }
     else {
-        $loc_tang_th=0.5;
+        $loc_tang_th = 0.5;
     }
-    if ( $type eq "missense") {
+    if ( $type eq "missense" ) {
         my $loc_tang_index
-            = calcutalte_tang_index( $ref_aa_long, $alt_aa_long );            
+            = calcutalte_tang_index( $ref_aa_long, $alt_aa_long );
         my $loc_deltaH = calcutalte_deltaH( $ref_aa_long, $alt_aa_long );
         my $loc_GD = calculate_grantham_matrix( $ref_aa_long, $alt_aa_long );
         if ( $loc_tang_index < $loc_tang_th ) {
@@ -1928,6 +1945,37 @@ sub load_coding_snp {
 sub show_help {
     print "Version: $version by Viacheslav Sinkov (vsinkov_at_gmail.com)\n\n";
     pod2usage( "verbose" => 99, -utf8 );
+}
+
+sub get_information {
+    my ($locus_name) = @_;
+    if ( $locus_name ne "" && $database{$locus_name}{"end"} ne "" ) {
+        my $nuc_seq = $database{$locus_name}{"sequence"};
+
+        my @codons = unpack( "(A3)*", $nuc_seq );
+        my @aminoAcids    = map { codon2aa $_} @codons;
+        my @aa_one_letter = map { aa_decode $_} @aminoAcids;
+        my $aa_seq = join '', @aa_one_letter;
+
+ # my @aminoAcids = map { exists $aacode{$_} ? $aacode{$_} : "?$_?" } @codons;
+
+        print "Locus:\t$locus_name\nStart:\t"
+            . $database{$locus_name}{"start"}
+            . "\nEnd:\t"
+            . $database{$locus_name}{"end"}
+            . "\nProduct:\t"
+            . $database{$locus_name}{"product"}
+            . "\nNote:\t"
+            . $database{$locus_name}{"note"}
+            . "\nSequence:\t"
+            . $nuc_seq
+            . "\nProtein:\t"
+            . $aa_seq . "\n";
+    }
+
+    else {
+        print "Locus $locus_name not found!\n";
+    }
 }
 
 __END__
