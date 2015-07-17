@@ -38,6 +38,7 @@ my %GD_dic;
 my %aa_hash;
 my %snp_list_h;
 my %snp_igpos_list_h;
+my %aa_mw;
 
 my %options;    # options hash
 
@@ -45,7 +46,7 @@ GetOptions(
     \%options,   'db=s',   'action=s', 'snp_list=s',
     'vcf=s',     "about!", "color",    'help',
     'snp_th=s',  'list=s', "DP=s",     "target=s",
-    "tang_th=s", "locus=s"
+    "tang_th=s", "locus=s","prosite"
 );
 
 &show_help( "verbose" => 99, -utf8 ) if $options{help};
@@ -234,6 +235,22 @@ sub aa_decode {
 #
 # ------------------------------------------------------------
 
+sub aa_mw_calc {
+
+    #convert three letter AA to short nomenclature (one letter)
+    my $aa_input = shift;
+
+    if ( exists $aa_mw{$aa_input} ) {
+        return $aa_mw{$aa_input};
+    }
+
+}
+
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
 sub load_db {
 
     #load genome database created by gb2db.pl
@@ -248,6 +265,7 @@ sub load_db {
     %GD_dic       = %{ $hash_ref->{dict}{GD} };       # Grantham values
     %genetic_code = %{ $hash_ref->{dict}{codon} };    #codon table
     %aa_hash      = %{ $hash_ref->{dict}{aa} };       #amino acid table
+    %aa_mw        = %{ $hash_ref->{dict}{aa_mw} };    #amino acid table
 
     #------------------------------------
     $db_version      = $database{options}{version};
@@ -1949,6 +1967,7 @@ sub show_help {
 
 sub get_information {
     my ($locus_name) = @_;
+    my $gene_length = 0;
     if ( $locus_name ne "" && $database{$locus_name}{"end"} ne "" ) {
         my $nuc_seq = $database{$locus_name}{"sequence"};
 
@@ -1956,26 +1975,202 @@ sub get_information {
         my @aminoAcids    = map { codon2aa $_} @codons;
         my @aa_one_letter = map { aa_decode $_} @aminoAcids;
         my $aa_seq = join '', @aa_one_letter;
+        my @aaMw  = map { aa_mw_calc $_} @aminoAcids;
+        my $start = $database{$locus_name}{"start"};
+        my $end   = $database{$locus_name}{"end"};
+
+        my $rna = $nuc_seq;
+        $rna =~ tr/T/U/;
+        if ( $end > $start ) {
+            $gene_length = ( $end - $start ) + 1;
+        }
+        elsif ( $start > $end ) {
+            $gene_length = ( $start - $end ) + 1;
+        }
+        my $count = 0;
+        for ( my $i = 0; $i < $gene_length; $i++ ) {
+            my $sub = substr( $nuc_seq, $i, 1 );
+            if ( $sub =~ /G|C/i ) {
+                $count++;
+            }
+        }
+
+        my $GC = sprintf( "%.1f", $count * 100 / $gene_length );
 
  # my @aminoAcids = map { exists $aacode{$_} ? $aacode{$_} : "?$_?" } @codons;
 
-        print "Locus:\t$locus_name\nStart:\t"
-            . $database{$locus_name}{"start"}
-            . "\nEnd:\t"
-            . $database{$locus_name}{"end"}
-            . "\nProduct:\t"
+        print "-" x 50
+            . "\nLocus: $locus_name ($start - $end) "
+            . "\nProduct: "
             . $database{$locus_name}{"product"}
-            . "\nNote:\t"
+            . "\nNote: "
             . $database{$locus_name}{"note"}
-            . "\nSequence:\t"
+            . "\nGene length (bp): "
+            . $gene_length
+            . "\nGC (%): " . "$GC\n"
+            . "." x 50
+            . "\nDNA :\n"
             . $nuc_seq
-            . "\nProtein:\t"
-            . $aa_seq . "\n";
+            . "\nRNA :\n"
+            . "$rna\n"
+            . "." x 50
+            . "\nProtein:\n"
+            . $aa_seq
+            . "\nMolecular mass (Da) approx. : "
+            . sum(@aaMw)
+            . "\nProtein length (aa): "
+            . length($aa_seq) . "\n";
+            if ($options{prosite}){
+            &procite_patterns_parsing($aa_seq);
+            }
     }
 
     else {
         print "Locus $locus_name not found!\n";
     }
+}
+
+sub procite_patterns_parsing {
+#
+# This function based on original script: parse_prosite created by James Tisdall, 2001
+#
+my ($protein)=@_;
+my $prosite_file="prosite.dat";
+my $dir             = getcwd;
+my $record = '';
+if ( -e "$dir/$prosite_file" ) {
+print "." x 50 . "\n";
+
+open(my $fh, $prosite_file)
+ or die "Cannot open PROSITE file $prosite_file";
+#
+# set input separator to termination line //
+$/ = "//\n";
+
+while($record = <$fh>) {
+
+  #
+  # Parse the PROSITE record into its "line types"
+  #
+  my %line_types = get_line_types($record);
+
+  #
+  # Skip records without an ID (the first record)
+  #
+  defined $line_types{'ID'} or next;
+
+  #
+  # Skip records that are not PATTERN
+  # (such as MATRIX or RULE)
+  #
+  $line_types{'ID'} =~ /PATTERN/ or next;
+
+  #
+  # Get the ID of this record
+  #
+  my $id = $line_types{'ID'};
+  my $de= $line_types{'DE'};
+  $de=~s/^DE   //;
+  $id =~ s/^ID   //;
+  $id =~ s/; .*//;
+
+  #
+  # Get the PROSITE pattern from the PA line(s)
+  #
+  my $pattern = $line_types{'PA'};
+  # Remove the PA line type tag(s)
+  $pattern =~ s/PA   //g;
+
+  #
+  # Calculate the Perl regular expression
+  # from the PROSITE pattern
+  #
+  my $regexp =  PROSITE_2_regexp_clever($pattern);
+
+  #
+  # Find the PROSITE regular expression patterns
+  # in the protein sequence, and report
+  #
+  while ($protein =~ /$regexp/g) {
+    my $position = (pos $protein) - length($&) +1;
+    print "$de Found $id at position $position\n";    
+    print "   match:   $&\n";
+    print "   pattern: $pattern\n";
+    # print "   regexp:  $regexp\n\n";
+  }
+
+}
+}
+else{
+    print "prosite.dat file not found!";
+    exit;
+}
+}
+
+sub PROSITE_2_regexp_clever {
+
+# This function was copied from script parse_prosite created by James Tisdall, 2001
+
+  my($pattern) = @_;
+  # print "@_\t";
+  $pattern =~ s/{/[^/g;
+    # print "$pattern\n";
+  $pattern =~ tr/cx}()<>\-\./C.]{}^$/d;
+
+  $pattern =~ s/\[G\$\]/(G|\$)/;
+
+  # Return PROSITE pattern translated to Perl regular expression
+  return $pattern;
+}
+
+
+
+#
+# Parse a PROSITE record into "line types" hash
+# 
+sub get_line_types {
+# This function was copied from script parse_prosite created by James Tisdall, 2001
+  #
+  # Collect the PROSITE record
+  #
+  my($record) = @_;
+
+  #
+  # Initialize the hash
+  #   key   = line type
+  #   value = lines
+  #
+  my %line_types_hash = ();
+
+  #
+  # Split the PROSITE record to an array of lines
+  #
+  my @records = split(/\n/,$record);
+
+  #
+  # Loop through the lines of the PROSITE record
+  #
+  foreach my $line (@records) {
+
+    #
+    # Extract the 2-character name
+    # of the line type
+    #
+    my $line_type = substr($line,0,2);
+
+    #
+    # Append the line to the hash
+    # indexed by this line type
+    #
+    (defined $line_types_hash{$line_type})
+    ?  ($line_types_hash{$line_type} .= $line)
+    :  ($line_types_hash{$line_type} = $line);
+  }
+
+  #
+  # Return the hash 
+  #
+  return %line_types_hash;
 }
 
 __END__
