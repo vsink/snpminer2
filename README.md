@@ -25,4 +25,4 @@ SNP_set5
 intergenic_set1
 	-	igpos1673425	inhA_minus15_INH
 
-	
+
