@@ -1,8 +1,17 @@
 # snpMiner2
+
 The snpMiner2 is a gene annotation script written in Perl that will assist you with annotation of variable call format (vcf) files in bacterial genomes.  
 The current version of program is Alpha. This is a worked version without help information. The current version annotate SNPs and does not work with INDELs and intergenic substitutions.
 
-The snpMiner2.pl depends on Bioperl and  following modules:
+
+PREREQUISITES
+
+In order to install and use this package you will need Perl version
+5.8.1 or better.  Some modules within this package depend on other
+packages that are distributed separately from Perl.  We recommend that
+you have the following packages installed before you install
+snpMiner2:
+
 
 ```
 Bio::SeqIO;
@@ -20,7 +29,8 @@ List::Compare;
 Cwd;
 List::Util qw(first max maxstr min minstr reduce shuffle sum);
 ```
-
+  
+HOW TO WORK:
 
 The first you should to create database file by gb2db.pl script:
 
@@ -106,3 +116,14 @@ check SNPs
 ./snpMiner2.pl -db <db_name> -action check_snp -snp_list <snp_collection_name>
 
 ```
+
+COPYRIGHT
+
+  © 2014-2015 Viacheslav V. Sinkov. The laboratory of Social and Epidemic Infections, 
+"Scientific Centre for Family Health and Human Reproduction Problems" 
+16, Timiriazeva st., Irkutsk, Russia.
+  
+This program is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+Enjoy!
