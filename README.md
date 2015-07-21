@@ -49,7 +49,7 @@ snp_collection file consists SNPs which you want to check in process of annotati
 
 ```
 Name<end_of_line>
-<tab><locus><tab><SNP_notation><tab><type><tab><description>
+<tab><locus><tab><SNP_notation><tab><<description>
 ```
 
 The SNP_notation field supports following types:
