@@ -42,7 +42,7 @@ Name<end_of_line>
 <tab><locus><tab><SNP_notation><tab><type><tab><description>
 ```
 
-The SNP_notation field supports following types of writing:
+The SNP_notation field supports following types:
 
 ```
 1. 455g>c (SNP position in gene. Needed a locus name.)
