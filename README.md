@@ -11,10 +11,20 @@ snp_collection file consists SNPs which you want to check in process of annotati
 
 ```
 Name<end_of_line>
-<tab><locus><tab><SNP_notation><type><description>
+<tab><locus><tab><SNP_notation><tab><type><tab><description>
 ```
 
+The SNP_notation field supports following types of writing:
 
+```
+1. 455g>c (SNP position in gene. Needed a locus name.)
+2. 489935_G>C (SNP position in genome)
+3. V105I (AA position in gene. Needed a locus name.)
+4. 761155_Asp749Glu (AA position in genome and gene)
+5. codon450 (codon position in gene. Needed a locus name.)
+6. igpos1673425 (position in genome for intergenic SNPs)
+```
+Example of snp_collection_file's fields:
 ```
 SNP_set1
 	rv0557	455g>c	test
