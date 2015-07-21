@@ -117,6 +117,13 @@ check SNPs
 
 ```
 
+If you will use snpMiner2 in your work, please, cite us:
+
+```
+Viacheslav V. Sinkov. (2015). snpminer2 v.0.2-alpha. Zenodo. 10.5281/zenodo.20917
+```
+
+
 COPYRIGHT
 
   © 2014-2015 Viacheslav V. Sinkov. The laboratory of Social and Epidemic Infections, 
