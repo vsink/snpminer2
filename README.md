@@ -3,10 +3,17 @@ The snpMiner2 is a gene annotation script written in Perl that will assist you w
 The current version of program is Alpha. This is a worked version without help information. The current version annotate SNPs and does not work with INDELs and intergenic substitutions.
 
 The first you should create database file by gb2db.pl script:
-
+```
 ./gb2db.pl -o <db_name> -i <genbank_fileformat_file> -snp <snp_collection_file>
 
+```
 snp_collection file consists SNPs which you want to check in process of annotation. The structure of snp_collection_file is tab-delimeted fields:
+
+```
+Name<end_of_line>
+<tab><locus><tab><SNP_notation><type><description>
+```
+
 
 ```
 SNP_set1
