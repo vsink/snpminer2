@@ -1,2 +1,2 @@
 # snpminer2
-The snpMiner2 is a gene annotation program. 
+The snpMiner2 is a gene annotation script written in Perl that will assist you with annotation of variable call format (vcf) files.  
