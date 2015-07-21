@@ -45,11 +45,11 @@ Name<end_of_line>
 The SNP_notation field supports following types:
 
 ```
-1. 455g>c (SNP position in gene. Needed a locus name.)
+1. 455g>c (SNP position in gene. Needs a locus name.)
 2. 489935_G>C (SNP position in genome)
-3. V105I (AA position in gene. Needed a locus name.)
+3. V105I (AA position in gene. Needs a locus name.)
 4. 761155_Asp749Glu (AA position in genome and gene)
-5. codon450 (codon position in gene. Needed a locus name.)
+5. codon450 (codon position in gene. Needs a locus name.)
 6. igpos1673425 (position in genome for intergenic SNPs)
 ```
 Example of snp_collection_file's fields:
@@ -72,3 +72,37 @@ intergenic_set1
 	-	igpos1673425	inhA_minus15_INH
 ```
 
+
+Usage snpMiner2:
+
+The numbers in action name are different levels of output information.
+
+annotation of vcf file
+
+```
+./snpMiner2.pl -db <db_name> -action annotation -vcf <vcf_file> > output_file
+./snpMiner2.pl -db <db_name> -action annotation.1 -vcf <vcf_file> > output_file
+./snpMiner2.pl -db <db_name> -action annotation.11 -vcf <vcf_file> > output_file
+./snpMiner2.pl -db <db_name> -action annotation.2 -vcf <vcf_file> > output_file
+./snpMiner2.pl -db <db_name> -action annotation.3 -vcf <vcf_file> > output_file
+```
+find uniq SNP for all vcf files in currend directory:
+
+```
+./snpMiner2.pl -db <db_name> -action uniq > output_file
+./snpMiner2.pl -db <db_name> -action uniq.1 > output_file
+./snpMiner2.pl -db <db_name> -action uniq.2 > output_file
+./snpMiner2.pl -db <db_name> -action uniq.3 > output_file
+./snpMiner2.pl -db <db_name> -action uniq.4 > output_file
+./snpMiner2.pl -db <db_name> -action uniq.5 > output_file
+./snpMiner2.pl -db <db_name> -action uniq.6 > output_file
+./snpMiner2.pl -db <db_name> -action uniq.7 > output_file
+
+```
+
+check SNP 
+
+```
+./snpMiner2.pl -db <db_name> -action check_snp -snp_list <snp_collection_name>
+
+```
