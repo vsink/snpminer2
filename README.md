@@ -86,7 +86,7 @@ annotation of vcf file
 ./snpMiner2.pl -db <db_name> -action annotation.2 -vcf <vcf_file> > output_file
 ./snpMiner2.pl -db <db_name> -action annotation.3 -vcf <vcf_file> > output_file
 ```
-find uniq SNP for all vcf files in currend directory:
+unique SNPs for all vcf files in current directory:
 
 ```
 ./snpMiner2.pl -db <db_name> -action uniq > output_file
@@ -100,7 +100,7 @@ find uniq SNP for all vcf files in currend directory:
 
 ```
 
-check SNP 
+check SNPs 
 
 ```
 ./snpMiner2.pl -db <db_name> -action check_snp -snp_list <snp_collection_name>
