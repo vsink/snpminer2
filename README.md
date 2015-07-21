@@ -2,9 +2,37 @@
 The snpMiner2 is a gene annotation script written in Perl that will assist you with annotation of variable call format (vcf) files in bacterial genomes.  
 The current version of program is Alpha. This is a worked version without help information. The current version annotate SNPs and does not work with INDELs and intergenic substitutions.
 
+The snpMiner2.pl depends on Bioperl and  following modules:
+
+```
+Bio::SeqIO;
+Bio::Perl;
+Bio::DB::GenBank;
+Pod::Usage;
+Getopt::Long;
+File::Temp qw/ tempfile tempdir /;
+Storable qw(freeze thaw);
+Data::Dumper;
+Carp;
+IO::Compress::RawDeflate qw(rawdeflate $RawDeflateError);
+IO::Uncompress::RawInflate qw(rawinflate $RawInflateError);
+List::Compare;
+Cwd;
+List::Util qw(first max maxstr min minstr reduce shuffle sum);
+```
+
+
 The first you should to create database file by gb2db.pl script:
+
 ```
 ./gb2db.pl -o <db_name> -i <genbank_fileformat_file> -snp <snp_collection_file>
+
+```
+
+If you does not have genbank file, you can use -id <organism_id> key to download it automatically.
+
+```
+./gb2db.pl -o <db_name> -id <organism_id> -snp <snp_collection_file>
 
 ```
 snp_collection file consists SNPs which you want to check in process of annotation. The structure of snp_collection_file is tab-delimeted fields:
