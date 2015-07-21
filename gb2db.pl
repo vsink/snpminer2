@@ -21,20 +21,6 @@ my $organism_name = "";
 my $organism_id   = "";
 my $remote        = 0;
 
-my $logo
-    = "  _____ _   _ _____           _\n"
-    . " / ____| \\ | |  __ \\         (_)\n"
-    . " | (___|  \\| | |__) | __ ___  _ _ __   ___ _ __\n"
-    . " \\___ \\| . ` |  ___/ '_ ` _ \\| | '_ \\ / _ \ '__|\n"
-    . " ____) | |\\  | |   | | | | | | | | | |  __/ |\n"
-    . "|_____/|_| \\_|_|   |_| |_| |_|_|_| |_|\\___|_|\n"
-    . "-" x 50 . "\n"
-    . " " x 5
-    . "(c) V. Sinkov, Irkutsk, Russia, 2014-2015 \n" . "\n"
-    . " " x 13
-    . "-= www.epidlab.ru =- \n"
-    . "-" x 50 . "\n";
-
 GetOptions(
     'i=s'   => \$in_file,
     'o=s'   => \$out_file,
@@ -687,6 +673,31 @@ sub create_db_file {
             ${dict}{aa}{Thr} = 'T';
 
             #------------------------------------
+
+            ${dict}{aa_mw}{Ala} = '71.0788';
+            ${dict}{aa_mw}{Arg} = '156.1875';
+            ${dict}{aa_mw}{Asn} = '114.1038';
+            ${dict}{aa_mw}{Asp} = '115.0886';
+            ${dict}{aa_mw}{Cys} = '103.1388';
+            ${dict}{aa_mw}{Glu} = '129.1155';
+            ${dict}{aa_mw}{Gln} = '128.1307';
+            ${dict}{aa_mw}{Gly} = '57.0519';
+            ${dict}{aa_mw}{His} = '137.1411';
+            ${dict}{aa_mw}{Ile} = '113.1594';
+            ${dict}{aa_mw}{Leu} = '113.1594';
+            ${dict}{aa_mw}{Lys} = '128.1741';
+            ${dict}{aa_mw}{Met} = '131.1926';
+            ${dict}{aa_mw}{Phe} = '147.1766';
+            ${dict}{aa_mw}{Pro} = '97.1167';
+            ${dict}{aa_mw}{Ser} = '87.0782';
+            ${dict}{aa_mw}{Thr} = '101.1051';
+            ${dict}{aa_mw}{Trp} = '186.2132';
+            ${dict}{aa_mw}{Tyr} = '163.1760';
+            ${dict}{aa_mw}{Val} = '99.1326';
+
+
+            #------------------------------------
+            
             my @grantham_matrix = qw/
                 0 112 111 126 195  91 107  60  86  94  96 106  84 113  27  99  58 148 112  64
                 112   0  86  96 180  43  54 125  29  97 102  26  91  97 103 110  71 101  77  96
@@ -736,7 +747,7 @@ sub create_db_file {
 
     # $annotations{options}{genome_seq} = $genome_seq;
     $annotations{options}{version}       = $version;
-    $annotations{options}{logo}          = $logo;
+    # $annotations{options}{logo}          = $logo;
     $annotations{options}{reference}     = $display_id;
     $annotations{options}{strain_name}   = $strain_name;
     $annotations{options}{organism_name} = $organism_name;
@@ -802,6 +813,7 @@ sub create_db_file {
                     # my ($pos_val)=$col3=~/(\d+)/;                    
                     ${dict}{snp_list}{intergenic}{$snp_list_name}
                         { uc($col3) }{'note'} = $col4;
+                         $annotations{options}{igpos_list_exists} = 1;
 
                 }
                 elsif ( $snp_notation eq "aa_genome" ) {
@@ -827,6 +839,7 @@ sub create_db_file {
             else {
                 print "Bad format of $snp_list file!\n";
                 $annotations{options}{snp_list_exists} = 0;
+                $annotations{options}{igpos_list_exists} = 0;
             }
 
        # $str =~ /^(\w+)\t(\S+)\t(.*)/;

@@ -11,7 +11,8 @@ use Carp;
 use IO::Compress::RawDeflate qw(rawdeflate $RawDeflateError);
 use IO::Uncompress::RawInflate qw(rawinflate $RawInflateError);
 use List::Compare;
-use Term::ANSIColor;
+
+# use Term::ANSIColor;
 use Cwd;
 use List::Util qw(first max maxstr min minstr reduce shuffle sum);
 
@@ -43,10 +44,10 @@ my %aa_mw;
 my %options;    # options hash
 
 GetOptions(
-    \%options,   'db=s',   'action=s', 'snp_list=s',
-    'vcf=s',     "about!", "color",    'help',
-    'snp_th=s',  'list=s', "DP=s",     "target=s",
-    "tang_th=s", "locus=s","prosite"
+    \%options, 'db=s',    'action=s', 'snp_list=s',
+    'vcf=s',   "about!",  'help',     'snp_th=s',
+    'list=s',  "DP=s",    "target=s", "tang_th=s",
+    "locus=s", "prosite", "o=s"
 );
 
 &show_help( "verbose" => 99, -utf8 ) if $options{help};
@@ -292,12 +293,13 @@ sub load_db {
 sub annotate_vcf {
     my $loc_file_in   = shift;
     my $AACI          = "";
-    my $loc_AACI_flag = "---";
+    my $loc_AACI_flag = "--";
     my $loc_AACI      = 0;
     my $loc_ref_name  = "";
-
+    my $DP="";
+    print "locus\tsnp_pos\tgene_pos\tcodons\taa_pos\ttype\tu_index\tGD\tscore\tDP\tproduct\n";
     open( my $fh, "<", $loc_file_in )
-        or croak "cannot open < $loc_file_in: $!";
+        or croak "cannot open < $loc_file_in: $!";    
     while (<$fh>) {
         my $str = "$_";
         $str =~ /.*($ref_genome_name)/x;
@@ -306,8 +308,7 @@ sub annotate_vcf {
         if ( length($2) == 1 && length($3) == 1 ) {
             my %tmp = &get_locus_info( $1, $3 );
             if ( $loc_ref_name ne $ref_genome_name ) {
-                print colored ['bold red'],
-                    "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                print "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                 exit;
             }
 
@@ -318,44 +319,43 @@ sub annotate_vcf {
                 && $tmp{'alt_aa_long'} ne 'BAD_CODON'
                 && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
             {
-
+                $DP=$4;
                 if ( $tmp{'snp_type'} eq "missense" ) {
                     my $loc_tang_index
                         = calcutalte_tang_index( $tmp{'ref_aa_long'},
                         $tmp{'alt_aa_long'} );
-                    my $loc_deltaH
-                        = calcutalte_deltaH( $tmp{'ref_aa_long'},
-                        $tmp{'alt_aa_long'} );
+                    # my $loc_deltaH
+                    #     = calcutalte_deltaH( $tmp{'ref_aa_long'},
+                    #     $tmp{'alt_aa_long'} );
                     my $loc_GD
                         = calculate_grantham_matrix( $tmp{'ref_aa_long'},
                         $tmp{'alt_aa_long'} );
+                    # my $titv=&calcutalte_tv_ti($tmp{'ref'},
+                    #     $tmp{'alt'} );
+                    #  $titv="-" if $titv eq "";
                     if ( $loc_tang_index < 0.5 ) {
                         $loc_AACI++;
                         substr $loc_AACI_flag, 0, 1, "+";
                     }
-                    if ( $loc_deltaH > 1.22 ) {
+                    # if ( $loc_deltaH > 1.22 ) {
+                    #     $loc_AACI++;
+                    #     substr $loc_AACI_flag, 1, 1, "+";
+                    # }
+                    if ( $loc_GD > 100 ) {
                         $loc_AACI++;
                         substr $loc_AACI_flag, 1, 1, "+";
                     }
-                    if ( $loc_GD > 100 ) {
-                        $loc_AACI++;
-                        substr $loc_AACI_flag, 2, 1, "+";
-                    }
                     $AACI
-                        = "$loc_tang_index\t$loc_deltaH\t$loc_GD\t$loc_AACI_flag\t";
+                        = "$loc_tang_index\t$loc_GD\t$loc_AACI_flag\t$DP\t";
                 }
                 else {
-                    $AACI = "-\t-\t-\t$loc_AACI_flag\t";
+                    $AACI = "-\t-\t$loc_AACI_flag\t$DP\t";
                 }
                 if ( $options{action} eq "annotation.1" ) {
-                    if ( $loc_AACI_flag eq "+++" && $options{color} == 1 ) {
-                        print colored ['bold green'],
-                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n";
-                    }
-                    else {
+                    # if ( $loc_AACI_flag eq "+++" ) {
                         print
                             "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n";
-                    }
+                    # }
                 }
 
        # elsif ( $options{action} eq "annotation.2" ) {
@@ -365,23 +365,20 @@ sub annotate_vcf {
                 elsif ( $options{action} eq "annotation" ) {
 
                     # print  color 'bold green';
-                    if ( $loc_AACI_flag eq "+++" && $options{color} == 1 ) {
-                        print colored ['bold green'],
-                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\n";
-                    }
-                    else {
-                        print
-                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\n";
-                    }
+                    # if ( $loc_AACI_flag ne "---" ) {
+
+                    #     print
+                    #         "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\n";
+                    # }
                 }
                 elsif ( $options{action} eq "annotation.11" ) {
                     print
                         "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n"
-                        if $loc_AACI_flag eq "+++";
+                        if $loc_AACI_flag ne "--";
                 }
 
                 $loc_AACI      = 0;
-                $loc_AACI_flag = "---";
+                $loc_AACI_flag = "--";
 
             }
 
@@ -442,7 +439,7 @@ sub use_snp_classification_intergenic {
             elsif ($+{ref_genome} ne "$ref_genome_name"
                 && $+{ref_genome} ne "" )
             {
-                print colored ['bold red'],
+                print 
                     "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                 last;
             }
@@ -520,7 +517,7 @@ sub use_snp_classification_coding {
                 # print &check_position($1). "\n";
                 my %tmp = &get_locus_info( $+{genome_pos}, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print colored ['bold red'],
+                    print 
                         "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -633,7 +630,7 @@ sub annotate_vcf_formatted {
         if ( length($2) == 1 && length($3) == 1 ) {
             my %tmp = &get_locus_info( $1, $3 );
             if ( $loc_ref_name ne $ref_genome_name ) {
-                print colored ['bold red'],
+                print 
                     "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                 exit;
             }
@@ -737,7 +734,7 @@ sub find_uniq_genes {
 
                 # my %tmp = &get_locus_info( $1, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print colored ['bold red'],
+                    print
                         "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -861,7 +858,7 @@ sub find_uniq_genes_formated {
 
                 # my %tmp = &get_locus_info( $1, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print colored ['bold red'],
+                    print 
                         "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -992,7 +989,7 @@ sub compare_files_by_snp {
 
                 # my %tmp = &get_locus_info( $1, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print colored ['bold red'],
+                    print 
                         "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -1054,22 +1051,22 @@ sub compare_files_by_snp {
                 if ( my ($matched) = grep $_ eq $options{target},
                     @filenames_a )
                 {
-                    print colored ['bold yellow'], "\n" . "-" x 50;
+                    print "\n" . "-" x 50;
 
                     # . "\nSNP_POS:\n\t $key";
-                    print colored ['bold blue'], "\nLOCUS:\n\t";
+                    print "\nLOCUS:\n\t";
                     print
                         "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
 
                     # print "***: $matched\n";
-                    print colored ['bold green'],
+                    print
                           "FOUND_IN_W_TARGET ("
                         . $results_h{$key}{'count'} . "/"
                         . scalar(@files)
                         . "):\n\t";
                     print $results_h{$key}{'file_list'} . "\n";
                     if ( $results_h{$key}{'nf_count'} > 0 ) {
-                        print colored ['bold red'],
+                        print 
                               "NOT_FOUND_IN ("
                             . $results_h{$key}{'nf_count'} . "/"
                             . scalar(@files)
@@ -1079,20 +1076,20 @@ sub compare_files_by_snp {
                 }
             }
             else {
-                print colored ['bold yellow'], "\n" . "-" x 50;
+                print  "\n" . "-" x 50;
 
                 # . "\nSNP_POS:\n\t $key";
-                print colored ['bold blue'], "\nLOCUS:\n\t";
+                print  "\nLOCUS:\n\t";
                 print
                     "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
-                print colored ['bold green'],
+                print 
                       "FOUND_IN ("
                     . $results_h{$key}{'count'} . "/"
                     . scalar(@files)
                     . "):\n\t";
                 print $results_h{$key}{'file_list'} . "\n";
                 if ( $results_h{$key}{'nf_count'} > 0 ) {
-                    print colored ['bold red'],
+                    print 
                           "NOT_FOUND_IN ("
                         . $results_h{$key}{'nf_count'} . "/"
                         . scalar(@files)
@@ -1174,7 +1171,7 @@ sub compare_list_by_snp {
     # $th=(@files/2);
     $options{snp_th} = 20 if ( $options{snp_th} eq "" );
     if ( $options{list} eq "" ) {
-        print colored ['bold red'],
+        print 
             "Check list is not found! Use option --list <FILE> to load filelist!\n";
         print $options{list};
         exit;
@@ -1189,13 +1186,13 @@ sub compare_list_by_snp {
         # chomp;
         if ( -e "$dir/$loc_fname" ) {
             print uc($loc_fname) . "\t[ ";
-            print colored ['bold green'], "OK";
+            print  "OK";
             print " ]\n";
             push( @filelist_a, $loc_fname );
         }
         else {
             print uc($loc_fname) . "\t[ ";
-            print colored ['bold red'], "NOT_FOUND";
+            print "NOT_FOUND";
             print " ]\n";
         }
     }
@@ -1221,7 +1218,7 @@ sub compare_list_by_snp {
 
                 # my %tmp = &get_locus_info( $1, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print colored ['bold red'],
+                    print 
                         "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -1275,29 +1272,29 @@ sub compare_list_by_snp {
             && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
         {
             # if ( $options{color} == 1 ) {
-            print colored ['bold yellow'], "\n" . "-" x 50;
+            print "\n" . "-" x 50;
 
             # . "\nSNP_POS:\n\t $key";
-            print colored ['bold blue'], "\nLOCUS:\n\t";
+            print "\nLOCUS:\n\t";
             print
                 "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
 
   # print colored ['bold yellow'], "FOUND: " . $results_h{$key}{'count'} . "/"
   #     . scalar(@files);
-            print colored ['bold cyan'],
+            print 
                 "FILES (" . scalar(@files) . "):\n\t";
             print "$files_joied\n";
-            print colored ['bold yellow'],
+            print 
                 "FILE_LIST (" . scalar(@filelist_a) . "):\n\t";
             print "$filelist_joined\n";
-            print colored ['bold green'],
+            print 
                   "FOUND ("
                 . $results_h{$key}{'intersection_count'} . "/"
                 . scalar(@filelist_a) . "/"
                 . scalar(@files)
                 . "):\n\t";
             print $results_h{$key}{'intersection'} . "\n";
-            print colored ['bold red'],
+            print 
                   "NOT_FOUND_IN_FILES ("
                 . $results_h{$key}{'not_equal_count'} . "/"
                 . scalar(@files)
@@ -1477,7 +1474,7 @@ sub test5 {
         close $fh;
         $char_count = 0;
         print "$file\t[ ";
-        print colored ['bold green'], "OK";
+        print  "OK";
         print " ]\n";
 
     }
@@ -1802,7 +1799,7 @@ sub calc_aa_change_info {
     # my $alt_aa_long   = shift;
     # my $type          = shift;
     my ( $ref_aa_long, $alt_aa_long, $type ) = @_;
-    my $loc_AACI_flag = "---";
+    my $loc_AACI_flag = "--";
     my $loc_AACI;
     my $AACI;
     my $loc_tang_th;
@@ -1815,30 +1812,30 @@ sub calc_aa_change_info {
     if ( $type eq "missense" ) {
         my $loc_tang_index
             = calcutalte_tang_index( $ref_aa_long, $alt_aa_long );
-        my $loc_deltaH = calcutalte_deltaH( $ref_aa_long, $alt_aa_long );
+        # my $loc_deltaH = calcutalte_deltaH( $ref_aa_long, $alt_aa_long );
         my $loc_GD = calculate_grantham_matrix( $ref_aa_long, $alt_aa_long );
         if ( $loc_tang_index < $loc_tang_th ) {
             $loc_AACI++;
             substr $loc_AACI_flag, 0, 1, "+";
         }
-        if ( $loc_deltaH > 1.22 ) {
-            $loc_AACI++;
-            substr $loc_AACI_flag, 1, 1, "+";
-        }
+        # if ( $loc_deltaH > 1.22 ) {
+        #     $loc_AACI++;
+        #     substr $loc_AACI_flag, 1, 1, "+";
+        # }
         if ( $loc_GD > 100 ) {
             $loc_AACI++;
-            substr $loc_AACI_flag, 2, 1, "+";
+            substr $loc_AACI_flag, 1, 1, "+";
         }
 
         # return $loc_AACI_flag;
 
-        $AACI = "$loc_tang_index\t$loc_deltaH\t$loc_GD\t$loc_AACI_flag\t";
+        $AACI = "$loc_tang_index\t$loc_GD\t$loc_AACI_flag\t";
         return $AACI;
     }
     else {
         # return "---";
 
-        $AACI = "-\t-\t-\t$loc_AACI_flag\t";
+        $AACI = "-\t-\t$loc_AACI_flag\t";
         return $AACI;
     }
 
@@ -2020,9 +2017,9 @@ sub get_information {
             . sum(@aaMw)
             . "\nProtein length (aa): "
             . length($aa_seq) . "\n";
-            if ($options{prosite}){
+        if ( $options{prosite} ) {
             &procite_patterns_parsing($aa_seq);
-            }
+        }
     }
 
     else {
@@ -2034,143 +2031,156 @@ sub procite_patterns_parsing {
 #
 # This function based on original script: parse_prosite created by James Tisdall, 2001
 #
-my ($protein)=@_;
-my $prosite_file="prosite.dat";
-my $dir             = getcwd;
-my $record = '';
-if ( -e "$dir/$prosite_file" ) {
-print "." x 50 . "\n";
+    my ($protein)    = @_;
+    my $prosite_file = "prosite.dat";
+    my $dir          = getcwd;
+    my $record       = '';
+    if ( -e "$dir/$prosite_file" ) {
+        print "." x 50 . "\n";
 
-open(my $fh, $prosite_file)
- or die "Cannot open PROSITE file $prosite_file";
-#
-# set input separator to termination line //
-$/ = "//\n";
+        open( my $fh, $prosite_file )
+            or die "Cannot open PROSITE file $prosite_file";
+        #
+        # set input separator to termination line //
+        $/ = "//\n";
 
-while($record = <$fh>) {
+        while ( $record = <$fh> ) {
 
-  #
-  # Parse the PROSITE record into its "line types"
-  #
-  my %line_types = get_line_types($record);
+            #
+            # Parse the PROSITE record into its "line types"
+            #
+            my %line_types = prosite_to_hash($record);
 
-  #
-  # Skip records without an ID (the first record)
-  #
-  defined $line_types{'ID'} or next;
+            #
+            # Skip records without an ID (the first record)
+            #
+            defined $line_types{'ID'} or next;
 
-  #
-  # Skip records that are not PATTERN
-  # (such as MATRIX or RULE)
-  #
-  $line_types{'ID'} =~ /PATTERN/ or next;
+            #
+            # Skip records that are not PATTERN
+            # (such as MATRIX or RULE)
+            #
+            $line_types{'ID'} =~ /PATTERN/ or next;
 
-  #
-  # Get the ID of this record
-  #
-  my $id = $line_types{'ID'};
-  my $de= $line_types{'DE'};
-  $de=~s/^DE   //;
-  $id =~ s/^ID   //;
-  $id =~ s/; .*//;
+            #
+            # Get the ID of this record
+            #
+            my $id = $line_types{'ID'};
+            my $de = $line_types{'DE'};
+            my $ac = $line_types{'AC'};
+            $de =~ s/^DE   //;
+            $ac =~ s/^AC   //;
+            $ac =~ s/;//;
+            $id =~ s/^ID   //;
+            $id =~ s/; .*//;
 
-  #
-  # Get the PROSITE pattern from the PA line(s)
-  #
-  my $pattern = $line_types{'PA'};
-  # Remove the PA line type tag(s)
-  $pattern =~ s/PA   //g;
+            #
+            # Get the PROSITE pattern from the PA line(s)
+            #
+            my $pattern = $line_types{'PA'};
 
-  #
-  # Calculate the Perl regular expression
-  # from the PROSITE pattern
-  #
-  my $regexp =  PROSITE_2_regexp_clever($pattern);
+            # Remove the PA line type tag(s)
+            $pattern =~ s/PA   //g;
 
-  #
-  # Find the PROSITE regular expression patterns
-  # in the protein sequence, and report
-  #
-  while ($protein =~ /$regexp/g) {
-    my $position = (pos $protein) - length($&) +1;
-    print "$de Found $id at position $position\n";    
-    print "   match:   $&\n";
-    print "   pattern: $pattern\n";
-    # print "   regexp:  $regexp\n\n";
-  }
+            #
+            # Calculate the Perl regular expression
+            # from the PROSITE pattern
+            #
+            my $regexp = prosite_get_pattern($pattern);
 
+            #
+            # Find the PROSITE regular expression patterns
+            # in the protein sequence, and report
+            #
+            while ( $protein =~ /$regexp/g ) {
+                my $res_protein    = $protein;
+                my $pattern_length = length($&);
+                my $position       = ( pos $protein ) - $pattern_length + 1;
+                my $match          = $&;
+                $res_protein =~ s/$match/\_\_$match\_\_/g;
+                print "$de Found $id at position $position\n";
+                print "   $res_protein\n";
+                print "   ID:   $ac\n";
+                print "   match:   $match\n";
+                print "   pattern: $pattern\n";
+                print "   regexp:  $regexp\n\n";
+            
+            }
+
+        }
+    }
+    else {
+        print
+            "prosite.dat file not found! Please, download the latest version of prosite.dat from ftp://ftp.expasy.org/databases/prosite/ and copy it into working directory!\n";
+        exit;
+    }
 }
-}
-else{
-    print "prosite.dat file not found!";
-    exit;
-}
-}
 
-sub PROSITE_2_regexp_clever {
+sub prosite_get_pattern {
 
 # This function was copied from script parse_prosite created by James Tisdall, 2001
 
-  my($pattern) = @_;
-  # print "@_\t";
-  $pattern =~ s/{/[^/g;
+    my ($pattern) = @_;
+
+    # print "@_\t";
+    $pattern =~ s/{/[^/g;
+
     # print "$pattern\n";
-  $pattern =~ tr/cx}()<>\-\./C.]{}^$/d;
+    $pattern =~ tr/cx}()<>\-\./C.]{}^$/d;
 
-  $pattern =~ s/\[G\$\]/(G|\$)/;
+    $pattern =~ s/\[G\$\]/(G|\$)/;
 
-  # Return PROSITE pattern translated to Perl regular expression
-  return $pattern;
+    # Return PROSITE pattern translated to Perl regular expression
+    return $pattern;
 }
-
-
 
 #
 # Parse a PROSITE record into "line types" hash
-# 
-sub get_line_types {
+#
+sub prosite_to_hash {
+
 # This function was copied from script parse_prosite created by James Tisdall, 2001
-  #
-  # Collect the PROSITE record
-  #
-  my($record) = @_;
-
-  #
-  # Initialize the hash
-  #   key   = line type
-  #   value = lines
-  #
-  my %line_types_hash = ();
-
-  #
-  # Split the PROSITE record to an array of lines
-  #
-  my @records = split(/\n/,$record);
-
-  #
-  # Loop through the lines of the PROSITE record
-  #
-  foreach my $line (@records) {
+#
+# Collect the PROSITE record
+#
+    my ($record) = @_;
 
     #
-    # Extract the 2-character name
-    # of the line type
+    # Initialize the hash
+    #   key   = line type
+    #   value = lines
     #
-    my $line_type = substr($line,0,2);
+    my %line_types_hash = ();
 
     #
-    # Append the line to the hash
-    # indexed by this line type
+    # Split the PROSITE record to an array of lines
     #
-    (defined $line_types_hash{$line_type})
-    ?  ($line_types_hash{$line_type} .= $line)
-    :  ($line_types_hash{$line_type} = $line);
-  }
+    my @records = split( /\n/, $record );
 
-  #
-  # Return the hash 
-  #
-  return %line_types_hash;
+    #
+    # Loop through the lines of the PROSITE record
+    #
+    foreach my $line (@records) {
+
+        #
+        # Extract the 2-character name
+        # of the line type
+        #
+        my $line_type = substr( $line, 0, 2 );
+
+        #
+        # Append the line to the hash
+        # indexed by this line type
+        #
+        ( defined $line_types_hash{$line_type} )
+            ? ( $line_types_hash{$line_type} .= $line )
+            : ( $line_types_hash{$line_type} = $line );
+    }
+
+    #
+    # Return the hash
+    #
+    return %line_types_hash;
 }
 
 __END__
