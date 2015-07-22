@@ -1,8 +1,5 @@
 #!/usr/bin/env perl
 use Pod::Usage;
-use strict;
-use warnings;
-no warnings qw/uninitialized/;
 use Getopt::Long;
 use File::Temp qw/ tempfile tempdir /;
 use Storable qw(freeze thaw);
@@ -11,10 +8,11 @@ use Carp;
 use IO::Compress::RawDeflate qw(rawdeflate $RawDeflateError);
 use IO::Uncompress::RawInflate qw(rawinflate $RawInflateError);
 use List::Compare;
-
-# use Term::ANSIColor;
 use Cwd;
 use List::Util qw(first max maxstr min minstr reduce shuffle sum);
+use strict;
+use warnings;
+no warnings qw/uninitialized/;
 
 # use Benchmark qw(:all) ;
 # my $t0 = Benchmark->new;
@@ -296,10 +294,12 @@ sub annotate_vcf {
     my $loc_AACI_flag = "--";
     my $loc_AACI      = 0;
     my $loc_ref_name  = "";
-    my $DP="";
-    print "locus\tsnp_pos\tgene_pos\tcodons\taa_pos\ttype\tu_index\tGD\tscore\tDP\tproduct\n";
+    my $DP            = "";
+    print
+        "locus\tsnp_pos\tgene_pos\tcodons\taa_pos\ttype\tu_index\tGD\tscore\tDP\tproduct\n";
     open( my $fh, "<", $loc_file_in )
-        or croak "cannot open < $loc_file_in: $!";    
+        or croak "cannot open < $loc_file_in: $!";
+
     while (<$fh>) {
         my $str = "$_";
         $str =~ /.*($ref_genome_name)/x;
@@ -314,22 +314,24 @@ sub annotate_vcf {
 
  # print "$tmp{'alt_aa_long'}\t!!!!!\n" if $tmp{'alt_aa_long'} eq "BAD_CODON";
             if (   $tmp{'locus'} ne ""
-                && $tmp{'alt_aa_long'} ne 'STOP'
-                && $tmp{'ref_aa_long'} ne 'STOP'
+                # && $tmp{'alt_aa_long'} ne 'STOP'
+                # && $tmp{'ref_aa_long'} ne 'STOP'
                 && $tmp{'alt_aa_long'} ne 'BAD_CODON'
                 && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
             {
-                $DP=$4;
+                $DP = $4;                
                 if ( $tmp{'snp_type'} eq "missense" ) {
                     my $loc_tang_index
                         = calcutalte_tang_index( $tmp{'ref_aa_long'},
                         $tmp{'alt_aa_long'} );
+
                     # my $loc_deltaH
                     #     = calcutalte_deltaH( $tmp{'ref_aa_long'},
                     #     $tmp{'alt_aa_long'} );
                     my $loc_GD
                         = calculate_grantham_matrix( $tmp{'ref_aa_long'},
                         $tmp{'alt_aa_long'} );
+
                     # my $titv=&calcutalte_tv_ti($tmp{'ref'},
                     #     $tmp{'alt'} );
                     #  $titv="-" if $titv eq "";
@@ -337,6 +339,7 @@ sub annotate_vcf {
                         $loc_AACI++;
                         substr $loc_AACI_flag, 0, 1, "+";
                     }
+
                     # if ( $loc_deltaH > 1.22 ) {
                     #     $loc_AACI++;
                     #     substr $loc_AACI_flag, 1, 1, "+";
@@ -345,16 +348,18 @@ sub annotate_vcf {
                         $loc_AACI++;
                         substr $loc_AACI_flag, 1, 1, "+";
                     }
-                    $AACI
-                        = "$loc_tang_index\t$loc_GD\t$loc_AACI_flag\t$DP\t";
+                    $AACI = "$loc_tang_index\t$loc_GD\t$loc_AACI_flag\t$DP\t";
                 }
+
                 else {
                     $AACI = "-\t-\t$loc_AACI_flag\t$DP\t";
                 }
                 if ( $options{action} eq "annotation.1" ) {
+
                     # if ( $loc_AACI_flag eq "+++" ) {
-                        print
-                            "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n";
+                    print
+                        "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n";
+
                     # }
                 }
 
@@ -367,9 +372,9 @@ sub annotate_vcf {
                     # print  color 'bold green';
                     # if ( $loc_AACI_flag ne "---" ) {
 
-                    #     print
-                    #         "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\n";
-                    # }
+    print
+        "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\n";
+# }
                 }
                 elsif ( $options{action} eq "annotation.11" ) {
                     print
@@ -439,8 +444,7 @@ sub use_snp_classification_intergenic {
             elsif ($+{ref_genome} ne "$ref_genome_name"
                 && $+{ref_genome} ne "" )
             {
-                print 
-                    "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                print "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                 last;
             }
 
@@ -517,13 +521,13 @@ sub use_snp_classification_coding {
                 # print &check_position($1). "\n";
                 my %tmp = &get_locus_info( $+{genome_pos}, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print 
+                    print
                         "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
                 if (   $tmp{'locus'} ne ""
-                    && $tmp{'alt_aa_long'} ne 'STOP'
-                    && $tmp{'ref_aa_long'} ne 'STOP'
+                    # && $tmp{'alt_aa_long'} ne 'STOP'
+                    # && $tmp{'ref_aa_long'} ne 'STOP'
                     && $tmp{'alt_aa_long'} ne 'BAD_CODON'
                     && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
                 {
@@ -630,15 +634,14 @@ sub annotate_vcf_formatted {
         if ( length($2) == 1 && length($3) == 1 ) {
             my %tmp = &get_locus_info( $1, $3 );
             if ( $loc_ref_name ne $ref_genome_name ) {
-                print 
-                    "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                print "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                 exit;
             }
 
  # print "$tmp{'alt_aa_long'}\t!!!!!\n" if $tmp{'alt_aa_long'} eq "BAD_CODON";
             if (   $tmp{'locus'} ne ""
-                && $tmp{'alt_aa_long'} ne 'STOP'
-                && $tmp{'ref_aa_long'} ne 'STOP'
+                # && $tmp{'alt_aa_long'} ne 'STOP'
+                # && $tmp{'ref_aa_long'} ne 'STOP'
                 && $tmp{'alt_aa_long'} ne 'BAD_CODON'
                 && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
             {
@@ -766,8 +769,8 @@ sub find_uniq_genes {
             my %tmp = &get_locus_info( $key, $alt );
 
             if (   $tmp{'locus'} ne ""
-                && $tmp{'alt_aa_long'} ne 'STOP'
-                && $tmp{'ref_aa_long'} ne 'STOP'
+                # && $tmp{'alt_aa_long'} ne 'STOP'
+                # && $tmp{'ref_aa_long'} ne 'STOP'
                 && $tmp{'alt_aa_long'} ne 'BAD_CODON'
                 && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
             {
@@ -858,7 +861,7 @@ sub find_uniq_genes_formated {
 
                 # my %tmp = &get_locus_info( $1, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print 
+                    print
                         "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -881,8 +884,8 @@ sub find_uniq_genes_formated {
         if ( $files_per_snp_size == $count_f ) {
             my %tmp = &get_locus_info( $key, $alt );
             if (   $tmp{'locus'} ne ""
-                && $tmp{'alt_aa_long'} ne 'STOP'
-                && $tmp{'ref_aa_long'} ne 'STOP'
+                # && $tmp{'alt_aa_long'} ne 'STOP'
+                # && $tmp{'ref_aa_long'} ne 'STOP'
                 && $tmp{'alt_aa_long'} ne 'BAD_CODON'
                 && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
             {
@@ -989,7 +992,7 @@ sub compare_files_by_snp {
 
                 # my %tmp = &get_locus_info( $1, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print 
+                    print
                         "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -1036,8 +1039,8 @@ sub compare_files_by_snp {
     foreach my $key ( sort keys %results_h ) {
         my %tmp = &get_locus_info( $key, $results_h{$key}{'alt'} );
         if (   $tmp{'locus'} ne ""
-            && $tmp{'alt_aa_long'} ne 'STOP'
-            && $tmp{'ref_aa_long'} ne 'STOP'
+            # && $tmp{'alt_aa_long'} ne 'STOP'
+            # && $tmp{'ref_aa_long'} ne 'STOP'
             && $tmp{'alt_aa_long'} ne 'BAD_CODON'
             && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
         {
@@ -1059,15 +1062,13 @@ sub compare_files_by_snp {
                         "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
 
                     # print "***: $matched\n";
-                    print
-                          "FOUND_IN_W_TARGET ("
+                    print "FOUND_IN_W_TARGET ("
                         . $results_h{$key}{'count'} . "/"
                         . scalar(@files)
                         . "):\n\t";
                     print $results_h{$key}{'file_list'} . "\n";
                     if ( $results_h{$key}{'nf_count'} > 0 ) {
-                        print 
-                              "NOT_FOUND_IN ("
+                        print "NOT_FOUND_IN ("
                             . $results_h{$key}{'nf_count'} . "/"
                             . scalar(@files)
                             . "):\n\t";
@@ -1076,21 +1077,19 @@ sub compare_files_by_snp {
                 }
             }
             else {
-                print  "\n" . "-" x 50;
+                print "\n" . "-" x 50;
 
                 # . "\nSNP_POS:\n\t $key";
-                print  "\nLOCUS:\n\t";
+                print "\nLOCUS:\n\t";
                 print
                     "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
-                print 
-                      "FOUND_IN ("
+                print "FOUND_IN ("
                     . $results_h{$key}{'count'} . "/"
                     . scalar(@files)
                     . "):\n\t";
                 print $results_h{$key}{'file_list'} . "\n";
                 if ( $results_h{$key}{'nf_count'} > 0 ) {
-                    print 
-                          "NOT_FOUND_IN ("
+                    print "NOT_FOUND_IN ("
                         . $results_h{$key}{'nf_count'} . "/"
                         . scalar(@files)
                         . "):\n\t";
@@ -1171,7 +1170,7 @@ sub compare_list_by_snp {
     # $th=(@files/2);
     $options{snp_th} = 20 if ( $options{snp_th} eq "" );
     if ( $options{list} eq "" ) {
-        print 
+        print
             "Check list is not found! Use option --list <FILE> to load filelist!\n";
         print $options{list};
         exit;
@@ -1186,7 +1185,7 @@ sub compare_list_by_snp {
         # chomp;
         if ( -e "$dir/$loc_fname" ) {
             print uc($loc_fname) . "\t[ ";
-            print  "OK";
+            print "OK";
             print " ]\n";
             push( @filelist_a, $loc_fname );
         }
@@ -1218,7 +1217,7 @@ sub compare_list_by_snp {
 
                 # my %tmp = &get_locus_info( $1, $3 );
                 if ( $loc_ref_name ne $ref_genome_name ) {
-                    print 
+                    print
                         "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
                     last;
                 }
@@ -1266,8 +1265,8 @@ sub compare_list_by_snp {
     foreach my $key ( sort keys %results_h ) {
         my %tmp = &get_locus_info( $key, $results_h{$key}{'alt'} );
         if (   $tmp{'locus'} ne ""
-            && $tmp{'alt_aa_long'} ne 'STOP'
-            && $tmp{'ref_aa_long'} ne 'STOP'
+            # && $tmp{'alt_aa_long'} ne 'STOP'
+            # && $tmp{'ref_aa_long'} ne 'STOP'
             && $tmp{'alt_aa_long'} ne 'BAD_CODON'
             && $tmp{'ref_aa_long'} ne 'BAD_CODON' )
         {
@@ -1281,21 +1280,17 @@ sub compare_list_by_snp {
 
   # print colored ['bold yellow'], "FOUND: " . $results_h{$key}{'count'} . "/"
   #     . scalar(@files);
-            print 
-                "FILES (" . scalar(@files) . "):\n\t";
+            print "FILES (" . scalar(@files) . "):\n\t";
             print "$files_joied\n";
-            print 
-                "FILE_LIST (" . scalar(@filelist_a) . "):\n\t";
+            print "FILE_LIST (" . scalar(@filelist_a) . "):\n\t";
             print "$filelist_joined\n";
-            print 
-                  "FOUND ("
+            print "FOUND ("
                 . $results_h{$key}{'intersection_count'} . "/"
                 . scalar(@filelist_a) . "/"
                 . scalar(@files)
                 . "):\n\t";
             print $results_h{$key}{'intersection'} . "\n";
-            print 
-                  "NOT_FOUND_IN_FILES ("
+            print "NOT_FOUND_IN_FILES ("
                 . $results_h{$key}{'not_equal_count'} . "/"
                 . scalar(@files)
                 . "):\n\t";
@@ -1437,8 +1432,8 @@ sub test5 {
                     last;
                 }
                 if (   $tmp{'locus'} ne ""
-                    && $tmp{'alt_aa_long'} ne 'STOP'
-                    && $tmp{'ref_aa_long'} ne 'STOP'
+                    # && $tmp{'alt_aa_long'} ne 'STOP'
+                    # && $tmp{'ref_aa_long'} ne 'STOP'
                     && $tmp{'alt_aa_long'} ne 'BAD_CODON'
                     && $tmp{'ref_aa_long'} ne 'BAD_CODON'
                     && $4 > 10 )
@@ -1474,7 +1469,7 @@ sub test5 {
         close $fh;
         $char_count = 0;
         print "$file\t[ ";
-        print  "OK";
+        print "OK";
         print " ]\n";
 
     }
@@ -1589,11 +1584,15 @@ sub get_locus_info {
         substr $alt_res_codon, $loc_codon_pos, 1, $loc_alt;
         my $ref_aa = codon2aa($res_codon);
         my $alt_aa = codon2aa($alt_res_codon);
-        if ( $ref_aa eq $alt_aa ) {
+        if ( $ref_aa eq $alt_aa and $alt_aa ne "STOP") {
             $snp_type = "synonymous";
         }
-        elsif ( $ref_aa ne $alt_aa ) {
+        elsif ( $ref_aa ne $alt_aa and $alt_aa ne "STOP" ) {
             $snp_type = "missense";
+        }
+        elsif ( $ref_aa ne $alt_aa  and $alt_aa eq "STOP" ) {            
+            $snp_type = "nonsense";
+            
         }
 
         %locus_info_h = (
@@ -1812,12 +1811,14 @@ sub calc_aa_change_info {
     if ( $type eq "missense" ) {
         my $loc_tang_index
             = calcutalte_tang_index( $ref_aa_long, $alt_aa_long );
+
         # my $loc_deltaH = calcutalte_deltaH( $ref_aa_long, $alt_aa_long );
         my $loc_GD = calculate_grantham_matrix( $ref_aa_long, $alt_aa_long );
         if ( $loc_tang_index < $loc_tang_th ) {
             $loc_AACI++;
             substr $loc_AACI_flag, 0, 1, "+";
         }
+
         # if ( $loc_deltaH > 1.22 ) {
         #     $loc_AACI++;
         #     substr $loc_AACI_flag, 1, 1, "+";
@@ -2104,7 +2105,7 @@ sub procite_patterns_parsing {
                 print "   match:   $match\n";
                 print "   pattern: $pattern\n";
                 print "   regexp:  $regexp\n\n";
-            
+
             }
 
         }
@@ -2182,6 +2183,8 @@ sub prosite_to_hash {
     #
     return %line_types_hash;
 }
+
+
 
 __END__
 
