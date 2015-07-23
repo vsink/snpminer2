@@ -34,6 +34,8 @@ my %genetic_code;
 my %tang_dic;
 my %deltaH_dic;
 my %GD_dic;
+my %B45_dic;
+my %PAM30_dic;
 my %aa_hash;
 my %snp_list_h;
 my %snp_igpos_list_h;
@@ -45,7 +47,7 @@ GetOptions(
     \%options, 'db=s',    'action=s', 'snp_list=s',
     'vcf=s',   "about!",  'help',     'snp_th=s',
     'list=s',  "DP=s",    "target=s", "tang_th=s",
-    "locus=s", "prosite", "o=s"
+    "locus=s", "prosite", "o=s", "snp=s"
 );
 
 &show_help( "verbose" => 99, -utf8 ) if $options{help};
@@ -208,8 +210,11 @@ sub codon2aa {
 
     $codon = uc $codon;
 
-    if ( exists $genetic_code{$codon} ) {
+    if ( exists $genetic_code{$codon}  && $genetic_code{$codon} ne "STOP") {
         return $genetic_code{$codon};
+    }
+    if ( exists $genetic_code{$codon}  && $genetic_code{$codon} eq "STOP") {
+        return "X";
     }
     else {
 
@@ -226,6 +231,13 @@ sub aa_decode {
     if ( exists $aa_hash{$aa_input} ) {
         return $aa_hash{$aa_input};
     }
+    elsif ( $aa_input eq "X" ) {
+        return "X";
+    }
+    # else
+    # {
+    #     return "X";
+    # }
 
 }
 
@@ -262,6 +274,8 @@ sub load_db {
     %tang_dic     = %{ $hash_ref->{dict}{tang} };     # Tang index values
     %deltaH_dic   = %{ $hash_ref->{dict}{deltaH} };   # Delta H values
     %GD_dic       = %{ $hash_ref->{dict}{GD} };       # Grantham values
+    %B45_dic       = %{ $hash_ref->{dict}{B45} };       # BLOSUM45 values
+    %PAM30_dic       = %{ $hash_ref->{dict}{PAM30} };       # PAM30 values
     %genetic_code = %{ $hash_ref->{dict}{codon} };    #codon table
     %aa_hash      = %{ $hash_ref->{dict}{aa} };       #amino acid table
     %aa_mw        = %{ $hash_ref->{dict}{aa_mw} };    #amino acid table
@@ -291,12 +305,12 @@ sub load_db {
 sub annotate_vcf {
     my $loc_file_in   = shift;
     my $AACI          = "";
-    my $loc_AACI_flag = "--";
+    my $loc_AACI_flag = "----";
     my $loc_AACI      = 0;
     my $loc_ref_name  = "";
     my $DP            = "";
-    print
-        "locus\tsnp_pos\tgene_pos\tcodons\taa_pos\ttype\tu_index\tGD\tscore\tDP\tproduct\n";
+    # print
+        # "locus\tsnp_pos\tgene_pos\tcodons\taa_pos\ttype\tu_index\tGD\tscore\tDP\tproduct\n";
     open( my $fh, "<", $loc_file_in )
         or croak "cannot open < $loc_file_in: $!";
 
@@ -331,14 +345,19 @@ sub annotate_vcf {
                     my $loc_GD
                         = calculate_grantham_matrix( $tmp{'ref_aa_long'},
                         $tmp{'alt_aa_long'} );
-
+                     my $blosum
+                        = calculate_blosum45_matrix( $tmp{'ref_aa_long'},
+                        $tmp{'alt_aa_long'} );   
+                      my $pam
+                        = &calculate_pam30_matrix( $tmp{'ref_aa_long'},
+                        $tmp{'alt_aa_long'} );     
                     # my $titv=&calcutalte_tv_ti($tmp{'ref'},
                     #     $tmp{'alt'} );
                     #  $titv="-" if $titv eq "";
                     if ( $loc_tang_index < 0.5 ) {
                         $loc_AACI++;
                         substr $loc_AACI_flag, 0, 1, "+";
-                    }
+                    }                    
 
                     # if ( $loc_deltaH > 1.22 ) {
                     #     $loc_AACI++;
@@ -348,11 +367,20 @@ sub annotate_vcf {
                         $loc_AACI++;
                         substr $loc_AACI_flag, 1, 1, "+";
                     }
-                    $AACI = "$loc_tang_index\t$loc_GD\t$loc_AACI_flag\t$DP\t";
+                    if ( $blosum < 0 ) {
+                        $loc_AACI++;
+                        substr $loc_AACI_flag, 2, 1, "+";
+                    }
+                    if ( $pam < 0 ) {
+                        $loc_AACI++;
+                        substr $loc_AACI_flag, 3, 1, "+";
+                    }
+
+                    $AACI = "$loc_tang_index\t$loc_GD\t$blosum\t$pam\t$loc_AACI_flag\t$DP\t";
                 }
 
                 else {
-                    $AACI = "-\t-\t$loc_AACI_flag\t$DP\t";
+                    $AACI = "-\t-\t-\t-\t$loc_AACI_flag\t$DP\t";
                 }
                 if ( $options{action} eq "annotation.1" ) {
 
@@ -379,11 +407,11 @@ sub annotate_vcf {
                 elsif ( $options{action} eq "annotation.11" ) {
                     print
                         "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n"
-                        if $loc_AACI_flag ne "--";
+                        if $loc_AACI_flag ne "----";
                 }
 
                 $loc_AACI      = 0;
-                $loc_AACI_flag = "--";
+                $loc_AACI_flag = "----";
 
             }
 
@@ -818,6 +846,7 @@ sub find_uniq_genes {
     }
 
     print sort @results_a;
+    undef @results_a;
 
     # my $duration = time - $start;
     # print "Execution time: $duration s\n";
@@ -1539,6 +1568,7 @@ sub get_locus_info {
     my %locus_info_h;
     my $snp_gene_pos;
     my $snp_type = "";
+    my $gene_length=0;
 
     foreach my $key ( keys %database ) {
         if (   $loc_snp_pos > scalar $database{$key}{'start'}
@@ -1566,6 +1596,12 @@ sub get_locus_info {
             $snp_gene_pos = ( ( $loc_end - $loc_snp_pos ) + 1 );
             $loc_alt =~ tr/ACGT/TGCA/;
         }
+        if ( $loc_end > $loc_start ) {
+            $gene_length = ( $loc_end - $loc_start ) + 1;
+        }
+        elsif ( $loc_start > $loc_end ) {
+            $gene_length = ( $loc_start - $loc_end ) + 1;
+        }
         my $loc_ref = substr( $loc_nuc_seq, $snp_gene_pos - 1, 1 );
         my $codon_nbr = int( ( $snp_gene_pos - 1 ) / 3 ) + 1;
         my @codons        = unpack( "(A3)*", $loc_nuc_seq );
@@ -1583,14 +1619,14 @@ sub get_locus_info {
         my $alt_res_codon = $res_codon;
         substr $alt_res_codon, $loc_codon_pos, 1, $loc_alt;
         my $ref_aa = codon2aa($res_codon);
-        my $alt_aa = codon2aa($alt_res_codon);
-        if ( $ref_aa eq $alt_aa and $alt_aa ne "STOP") {
+        my $alt_aa = codon2aa($alt_res_codon);        
+        if ( $ref_aa eq $alt_aa and $alt_aa ne "X") {
             $snp_type = "synonymous";
         }
-        elsif ( $ref_aa ne $alt_aa and $alt_aa ne "STOP" ) {
+        elsif ( $ref_aa ne $alt_aa and $alt_aa ne "X" ) {
             $snp_type = "missense";
         }
-        elsif ( $ref_aa ne $alt_aa  and $alt_aa eq "STOP" ) {            
+        elsif ( $ref_aa ne $alt_aa  and $alt_aa eq "X" ) {            
             $snp_type = "nonsense";
             
         }
@@ -1616,7 +1652,9 @@ sub get_locus_info {
             "alt_aa_short"   => &aa_decode($alt_aa),
             "alt_codon"      => $alt_res_codon,
             "product"        => $loc_product,
-            "note"           => $loc_note
+            "note"           => $loc_note,
+            "gene_length"           => $gene_length,
+            "protein_length"           => scalar(@codons)-1,
 
         );
         return %locus_info_h;
@@ -1787,6 +1825,40 @@ sub calculate_grantham_matrix {
     }
 }
 
+
+sub calculate_blosum45_matrix {
+    my $aa_ref = &aa_decode(shift);
+    my $aa_alt = &aa_decode(shift);
+
+    # print @AAs;
+
+    # print values $tmp{matrix}{R};
+    if ( $aa_ref ne "" && $aa_alt ne "" ) {
+
+        # return $GD_dic->{$aa_ref}->{$aa_alt};
+        return $B45_dic{$aa_ref}{$aa_alt};
+
+        # exit;
+
+        # print $tmp->{GD}->{$aa_ref}->{$aa_alt} . "!!!!!!\n";
+        # exit;
+    }
+}
+
+sub calculate_pam30_matrix {
+    my $aa_ref = &aa_decode(shift);
+    my $aa_alt = &aa_decode(shift);
+
+   
+    if ( $aa_ref ne "" && $aa_alt ne "" ) {
+
+        
+        return $PAM30_dic{$aa_ref}{$aa_alt};
+
+      
+    }
+}
+
 # ------------------------------------------------------------
 #
 #
@@ -1798,7 +1870,7 @@ sub calc_aa_change_info {
     # my $alt_aa_long   = shift;
     # my $type          = shift;
     my ( $ref_aa_long, $alt_aa_long, $type ) = @_;
-    my $loc_AACI_flag = "--";
+    my $loc_AACI_flag = "----";
     my $loc_AACI;
     my $AACI;
     my $loc_tang_th;
@@ -1814,6 +1886,8 @@ sub calc_aa_change_info {
 
         # my $loc_deltaH = calcutalte_deltaH( $ref_aa_long, $alt_aa_long );
         my $loc_GD = calculate_grantham_matrix( $ref_aa_long, $alt_aa_long );
+        my $blosum = calculate_blosum45_matrix( $ref_aa_long, $alt_aa_long );
+        my $pam = calculate_pam30_matrix( $ref_aa_long, $alt_aa_long );
         if ( $loc_tang_index < $loc_tang_th ) {
             $loc_AACI++;
             substr $loc_AACI_flag, 0, 1, "+";
@@ -1827,16 +1901,24 @@ sub calc_aa_change_info {
             $loc_AACI++;
             substr $loc_AACI_flag, 1, 1, "+";
         }
+        if ( $blosum < 0 ) {
+            $loc_AACI++;
+            substr $loc_AACI_flag, 2, 1, "+";
+        }
+        if ( $pam < 0 ) {
+            $loc_AACI++;
+            substr $loc_AACI_flag, 3, 1, "+";
+        }
 
         # return $loc_AACI_flag;
 
-        $AACI = "$loc_tang_index\t$loc_GD\t$loc_AACI_flag\t";
+        $AACI = "$loc_tang_index\t$loc_GD\t$blosum\t$pam\t$loc_AACI_flag\t";
         return $AACI;
     }
     else {
         # return "---";
 
-        $AACI = "-\t-\t$loc_AACI_flag\t";
+        $AACI = "-\t-\t-\t-\t$loc_AACI_flag\t";
         return $AACI;
     }
 
@@ -1847,31 +1929,53 @@ sub calc_aa_change_info {
 #
 # ------------------------------------------------------------
 
-sub check_snp_notation {
+sub get_snp_notation {
     my $mut = shift;
+    my %result;    
     $mut =~ /^(\d+)(\D)>(\D)/x;
     if ( $1 ne "" && $2 ne "" && $3 ne "" ) {
-        return "nc_gene";
+        # return "nc_gene";
+        $result{type}='nc_gene';
+        $result{pos}=$1;
+        $result{ref}=$2;
+        $result{alt}=$3;
+        return %result;
     }
     else {
         $mut =~ /^(\D)(\d+)(\D)/x;
         if ( $1 ne "" && $2 ne "" && $3 ne "" ) {
-            return "aa";
+            # return "aa";
+            $result{type}='aa';
+            $result{pos}=$2;
+            $result{ref}=$1;
+            $result{alt}=$3;
+            return %result;
         }
         else {
 
             $mut =~ /^(\d+)_(\w)>(\w)/x;
             if ( $1 ne "" && $2 ne "" && $3 ne "" ) {
-                return "nc_genome";
+                # return "nc_genome";
+            $result{type}='nc_genome';
+            $result{pos}=$1;
+            $result{ref}=$2;
+            $result{alt}=$3;
+            return %result;
             }
             else {
                 $mut =~ /^^(\w{3})(\d+)(\w{3})/x;
                 if ( $1 ne "" && $2 ne "" && $3 ne "" ) {
-                    return "aa_long";
+                    # return "aa_long";
+                    $result{type}='aa_long';
+                    $result{pos}=$2;
+                    $result{ref}=$1;
+                    $result{alt}=$3;
+                    return %result;
                 }
                 else {
 
-                    return "bad";
+                    $result{type}='bad';
+                    return %result;        
                 }
 
             }
@@ -1966,6 +2070,7 @@ sub show_help {
 sub get_information {
     my ($locus_name) = @_;
     my $gene_length = 0;
+    my $snp = $options{snp} if $options{snp} ne "";
     if ( $locus_name ne "" && $database{$locus_name}{"end"} ne "" ) {
         my $nuc_seq = $database{$locus_name}{"sequence"};
 
@@ -1995,6 +2100,8 @@ sub get_information {
 
         my $GC = sprintf( "%.1f", $count * 100 / $gene_length );
 
+        # my $left= substr( $nuc_seq, $res{pos}-1, $res{pos}-1 );
+        
  # my @aminoAcids = map { exists $aacode{$_} ? $aacode{$_} : "?$_?" } @codons;
 
         print "-" x 50
@@ -2017,10 +2124,18 @@ sub get_information {
             . "\nMolecular mass (Da) approx. : "
             . sum(@aaMw)
             . "\nProtein length (aa): "
-            . length($aa_seq) . "\n";
+            . scalar(length($aa_seq)-1) . "\n";
         if ( $options{prosite} ) {
             &procite_patterns_parsing($aa_seq);
         }
+
+        if ($options{snp} ne ""){
+        my %res=&get_snp_notation($snp);
+        my $sub=$nuc_seq;
+        substr( $sub, $res{pos}-1, 1)="[$res{ref}>$res{alt}]";
+        print "SNP:\n$sub\n"
+        }
+        
     }
 
     else {

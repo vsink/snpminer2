@@ -695,9 +695,8 @@ sub create_db_file {
             ${dict}{aa_mw}{Tyr} = '163.1760';
             ${dict}{aa_mw}{Val} = '99.1326';
 
-
             #------------------------------------
-            
+
             my @grantham_matrix = qw/
                 0 112 111 126 195  91 107  60  86  94  96 106  84 113  27  99  58 148 112  64
                 112   0  86  96 180  43  54 125  29  97 102  26  91  97 103 110  71 101  77  96
@@ -737,6 +736,89 @@ sub create_db_file {
                 }
             }
 
+            my @blosum45_matrix = qw/
+5 -2 -1 -2 -1 -1 -1  0 -2 -1 -1 -1 -1 -2 -1  1  0 -2 -2  0 -1 -1  0 -5
+-2  7  0 -1 -3  1  0 -2  0 -3 -2  3 -1 -2 -2 -1 -1 -2 -1 -2 -1  0 -1 -5
+-1  0  6  2 -2  0  0  0  1 -2 -3  0 -2 -2 -2  1  0 -4 -2 -3  4  0 -1 -5
+-2 -1  2  7 -3  0  2 -1  0 -4 -3  0 -3 -4 -1  0 -1 -4 -2 -3  5  1 -1 -5
+-1 -3 -2 -3 12 -3 -3 -3 -3 -3 -2 -3 -2 -2 -4 -1 -1 -5 -3 -1 -2 -3 -2 -5
+-1  1  0  0 -3  6  2 -2  1 -2 -2  1  0 -4 -1  0 -1 -2 -1 -3  0  4 -1 -5
+-1  0  0  2 -3  2  6 -2  0 -3 -2  1 -2 -3  0  0 -1 -3 -2 -3  1  4 -1 -5
+ 0 -2  0 -1 -3 -2 -2  7 -2 -4 -3 -2 -2 -3 -2  0 -2 -2 -3 -3 -1 -2 -1 -5
+-2  0  1  0 -3  1  0 -2 10 -3 -2 -1  0 -2 -2 -1 -2 -3  2 -3  0  0 -1 -5
+-1 -3 -2 -4 -3 -2 -3 -4 -3  5  2 -3  2  0 -2 -2 -1 -2  0  3 -3 -3 -1 -5
+-1 -2 -3 -3 -2 -2 -2 -3 -2  2  5 -3  2  1 -3 -3 -1 -2  0  1 -3 -2 -1 -5
+-1  3  0  0 -3  1  1 -2 -1 -3 -3  5 -1 -3 -1 -1 -1 -2 -1 -2  0  1 -1 -5
+-1 -1 -2 -3 -2  0 -2 -2  0  2  2 -1  6  0 -2 -2 -1 -2  0  1 -2 -1 -1 -5
+-2 -2 -2 -4 -2 -4 -3 -3 -2  0  1 -3  0  8 -3 -2 -1  1  3  0 -3 -3 -1 -5
+-1 -2 -2 -1 -4 -1  0 -2 -2 -2 -3 -1 -2 -3  9 -1 -1 -3 -3 -3 -2 -1 -1 -5
+ 1 -1  1  0 -1  0  0  0 -1 -2 -3 -1 -2 -2 -1  4  2 -4 -2 -1  0  0  0 -5
+ 0 -1  0 -1 -1 -1 -1 -2 -2 -1 -1 -1 -1 -1 -1  2  5 -3 -1  0  0 -1  0 -5
+-2 -2 -4 -4 -5 -2 -3 -2 -3 -2 -2 -2 -2  1 -3 -4 -3 15  3 -3 -4 -2 -2 -5
+-2 -1 -2 -2 -3 -1 -2 -3  2  0  0 -1  0  3 -3 -2 -1  3  8 -1 -2 -2 -1 -5
+ 0 -2 -3 -3 -1 -3 -3 -3 -3  3  1 -2  1  0 -3 -1  0 -3 -1  5 -3 -3 -1 -5
+-1 -1  4  5 -2  0  1 -1  0 -3 -3  0 -2 -3 -2  0  0 -4 -2 -3  4  2 -1 -5
+-1  0  0  1 -3  4  4 -2  0 -3 -2  1 -1 -3 -1  0 -1 -2 -2 -3  2  4 -1 -5
+ 0 -1 -1 -1 -2 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1  0  0 -2 -1 -1 -1 -1 -1 -5
+-5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5 -5  1
+                /;
+
+            my @B45_AAs = qw/A   R   N   D   C   Q   E   G   H   I   L   K   M   F   P   S   T   W   Y   V   B   Z   X   */;
+
+            # my %GD_dic;
+
+            my $B45_num = @B45_AAs;
+
+            for ( my $i = 0; $i < $B45_num; $i++ ) {
+                for ( my $j = 0; $j < $B45_num; $j++ ) {
+
+                    # $GD_dic->{GD}->{ $GD_AAs[$i] }->{ $GD_AAs[$j] }
+                    # = $grantham_matrix[ ( $i * $GD_num ) + $j ];
+                    ${dict}{B45}->{ $B45_AAs[$i] }->{ $B45_AAs[$j] }
+                        = $blosum45_matrix[ ( $i * $B45_num ) + $j ];
+                }
+            }
+
+            my @pam30_matrix = qw/
+  6  -7  -4  -3  -6  -4  -2  -2  -7  -5  -6  -7  -5  -8  -2   0  -1 -13  -8  -2  -3  -3  -3 -17
+ -7   8  -6 -10  -8  -2  -9  -9  -2  -5  -8   0  -4  -9  -4  -3  -6  -2 -10  -8  -7  -4  -6 -17
+ -4  -6   8   2 -11  -3  -2  -3   0  -5  -7  -1  -9  -9  -6   0  -2  -8  -4  -8   6  -3  -3 -17
+ -3 -10   2   8 -14  -2   2  -3  -4  -7 -12  -4 -11 -15  -8  -4  -5 -15 -11  -8   6   1  -5 -17
+ -6  -8 -11 -14  10 -14 -14  -9  -7  -6 -15 -14 -13 -13  -8  -3  -8 -15  -4  -6 -12 -14  -9 -17
+ -4  -2  -3  -2 -14   8   1  -7   1  -8  -5  -3  -4 -13  -3  -5  -5 -13 -12  -7  -3   6  -5 -17
+ -2  -9  -2   2 -14   1   8  -4  -5  -5  -9  -4  -7 -14  -5  -4  -6 -17  -8  -6   1   6  -5 -17
+ -2  -9  -3  -3  -9  -7  -4   6  -9 -11 -10  -7  -8  -9  -6  -2  -6 -15 -14  -5  -3  -5  -5 -17
+ -7  -2   0  -4  -7   1  -5  -9   9  -9  -6  -6 -10  -6  -4  -6  -7  -7  -3  -6  -1  -1  -5 -17
+ -5  -5  -5  -7  -6  -8  -5 -11  -9   8  -1  -6  -1  -2  -8  -7  -2 -14  -6   2  -6  -6  -5 -17
+ -6  -8  -7 -12 -15  -5  -9 -10  -6  -1   7  -8   1  -3  -7  -8  -7  -6  -7  -2  -9  -7  -6 -17
+ -7   0  -1  -4 -14  -3  -4  -7  -6  -6  -8   7  -2 -14  -6  -4  -3 -12  -9  -9  -2  -4  -5 -17
+ -5  -4  -9 -11 -13  -4  -7  -8 -10  -1   1  -2  11  -4  -8  -5  -4 -13 -11  -1 -10  -5  -5 -17
+ -8  -9  -9 -15 -13 -13 -14  -9  -6  -2  -3 -14  -4   9 -10  -6  -9  -4   2  -8 -10 -13  -8 -17
+ -2  -4  -6  -8  -8  -3  -5  -6  -4  -8  -7  -6  -8 -10   8  -2  -4 -14 -13  -6  -7  -4  -5 -17
+  0  -3   0  -4  -3  -5  -4  -2  -6  -7  -8  -4  -5  -6  -2   6   0  -5  -7  -6  -1  -5  -3 -17
+ -1  -6  -2  -5  -8  -5  -6  -6  -7  -2  -7  -3  -4  -9  -4   0   7 -13  -6  -3  -3  -6  -4 -17
+-13  -2  -8 -15 -15 -13 -17 -15  -7 -14  -6 -12 -13  -4 -14  -5 -13  13  -5 -15 -10 -14 -11 -17
+ -8 -10  -4 -11  -4 -12  -8 -14  -3  -6  -7  -9 -11   2 -13  -7  -6  -5  10  -7  -6  -9  -7 -17
+ -2  -8  -8  -8  -6  -7  -6  -5  -6   2  -2  -9  -1  -8  -6  -6  -3 -15  -7   7  -8  -6  -5 -17
+ -3  -7   6   6 -12  -3   1  -3  -1  -6  -9  -2 -10 -10  -7  -1  -3 -10  -6  -8   6   0  -5 -17
+ -3  -4  -3   1 -14   6   6  -5  -1  -6  -7  -4  -5 -13  -4  -5  -6 -14  -9  -6   0   6  -5 -17
+ -3  -6  -3  -5  -9  -5  -5  -5  -5  -5  -6  -5  -5  -8  -5  -3  -4 -11  -7  -5  -5  -5  -5 -17
+-17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17 -17   1
+                /;
+# print "@pam30_matrix\n";
+my @PAM30_AAs = qw/A   R   N   D   C   Q   E   G   H   I   L   K   M   F   P   S   T   W   Y   V   B   Z   X   */;
+# print "@PAM30_AAs\n";
+
+my $PAM30_num = @PAM30_AAs;
+
+            for ( my $i = 0; $i < $PAM30_num; $i++ ) {
+                for ( my $j = 0; $j < $PAM30_num; $j++ ) {                   
+                    ${dict}{PAM30}->{ $PAM30_AAs[$i] }->{ $PAM30_AAs[$j] }
+                        = $pam30_matrix[ ( $i * $PAM30_num ) + $j ];                    
+                }
+            }
+            
+
             # $annotations{$locus_tag}{nucleotide}   = $nucleotide;
             $gene         = undef;
             $locus_tag    = undef;
@@ -746,7 +828,8 @@ sub create_db_file {
     }
 
     # $annotations{options}{genome_seq} = $genome_seq;
-    $annotations{options}{version}       = $version;
+    $annotations{options}{version} = $version;
+
     # $annotations{options}{logo}          = $logo;
     $annotations{options}{reference}     = $display_id;
     $annotations{options}{strain_name}   = $strain_name;
@@ -788,15 +871,15 @@ sub create_db_file {
 
                 }
                 elsif ( $snp_notation eq "nc_genome" ) {
-                    ${dict}{snp_list}{coding}{$snp_list_name}{ uc($col3) }{'note'}
-                        = $col4;
+                    ${dict}{snp_list}{coding}{$snp_list_name}{ uc($col3) }
+                        {'note'} = $col4;
 
                 }
                 elsif ( $snp_notation eq "pos" ) {
 
                     # my ($pos_val)=$col3=~/(\d+)/;
-                    ${dict}{snp_list}{coding}{$snp_list_name}{ uc($col3) }{'note'}
-                        = $col4;
+                    ${dict}{snp_list}{coding}{$snp_list_name}{ uc($col3) }
+                        {'note'} = $col4;
 
                     # print "$snp_list_name\t$col3\t$col4\t$pos_val\n";
 
@@ -810,20 +893,20 @@ sub create_db_file {
                 }
                 elsif ( $snp_notation eq "igpos" ) {
 
-                    # my ($pos_val)=$col3=~/(\d+)/;                    
+                    # my ($pos_val)=$col3=~/(\d+)/;
                     ${dict}{snp_list}{intergenic}{$snp_list_name}
                         { uc($col3) }{'note'} = $col4;
-                         $annotations{options}{igpos_list_exists} = 1;
+                    $annotations{options}{igpos_list_exists} = 1;
 
                 }
                 elsif ( $snp_notation eq "aa_genome" ) {
-                    ${dict}{snp_list}{coding}{$snp_list_name}{ uc($col3) }{'note'}
-                        = $col4;
+                    ${dict}{snp_list}{coding}{$snp_list_name}{ uc($col3) }
+                        {'note'} = $col4;
 
                 }
                 elsif ( $snp_notation eq "aa_genome_long" ) {
-                    ${dict}{snp_list}{coding}{$snp_list_name}{ uc($col3) }{'note'}
-                        = $col4;
+                    ${dict}{snp_list}{coding}{$snp_list_name}{ uc($col3) }
+                        {'note'} = $col4;
                 }
                 elsif ( $snp_notation eq "aa" && $col2 ne "" ) {
                     ${dict}{snp_list}{coding}{$snp_list_name}{ uc($col2) }
@@ -838,7 +921,7 @@ sub create_db_file {
             }
             else {
                 print "Bad format of $snp_list file!\n";
-                $annotations{options}{snp_list_exists} = 0;
+                $annotations{options}{snp_list_exists}   = 0;
                 $annotations{options}{igpos_list_exists} = 0;
             }
 
