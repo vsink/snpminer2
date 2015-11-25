@@ -3863,7 +3863,7 @@ sub load_coding_snp {
     # if ($position eq "489935_G>C"){print "!!!!!\n"};
     # my $snp_class_type = $snp_list_type_h{$options{snp_list}};
     if ( exists $snp_list_h{$snp_class_name}{$query_locus}{$query_snp} ) {
-        return $snp_list_h{$snp_class_name}{$query_locus}{$query_snp}{'note'};
+        return $snp_list_h{$snp_class_name}{$query_locus}{$query_snp}{'note'} . "[$query_locus:$query_snp]";
     }
     elsif ( exists $snp_list_h{$snp_class_name}{$position} ) {
         return $snp_list_h{$snp_class_name}{$position}{'note'};
