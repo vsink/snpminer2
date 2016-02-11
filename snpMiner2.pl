@@ -83,7 +83,7 @@ GetOptions(
 
 &show_help( "verbose" => 99, -utf8 ) if $options{help};
 
-if ( $options{action} eq "rf" ) {
+if ( $options{action} eq "rf" ) {    #extract db as dump file
     &load_db( $options{db} );
     &write_dump;
 }
@@ -100,7 +100,8 @@ if ( $options{action} eq "rf" ) {
 #     my $elapsed = tv_interval( $t0, [gettimeofday] );
 #     print "elapsed:\t$elapsed\n";
 # }
-elsif ( $options{action} eq "check_snp" ) {
+elsif ( $options{action} eq "check_snp" )
+{    #check existance of snp from database
 
     if ( $options{snp_list} ne "" && $options{db} ne "" ) {
         &load_db( $options{db} );
@@ -198,7 +199,7 @@ elsif ( $options{action} eq "t5" || $options{action} eq "t5.1" ) {
 
 }
 
-elsif ( $options{action} eq "annotation" and $options{vcf} ne "" ) {
+elsif ( $options{action} eq "annotation" and $options{vcf} ne "" and $options{vcf} ne "all"  ) {
     $options{lvl} = 1 if $options{lvl} eq "";
     if (   $options{lvl} == 1
         || $options{lvl} == 2
@@ -211,7 +212,26 @@ elsif ( $options{action} eq "annotation" and $options{vcf} ne "" ) {
         &open_single_vcf( $options{vcf}, 1 );
     }
 
-# "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$AACI$tmp{'product'}\n";
+    #
+}
+elsif ( $options{action} eq "annotation" and $options{vcf} eq "all" ) {
+    $options{lvl} = 1 if $options{lvl} eq "";
+    if (   $options{lvl} == 1
+        || $options{lvl} == 2
+        || $options{lvl} == 3
+        || $options{lvl} == 4
+        || $options{lvl} == 5
+        || $options{lvl} == 6 )
+    {
+        &load_db( $options{db} );
+        my @files = glob('*.vcf');
+        foreach my $file (@files) {
+            print "-" x 60 . "\n$file\n" . "-" x 60 . "\n" if $options{debug};
+            open_single_vcf( $file, 1 );                        
+        }
+    }
+
+    #
 }
 
 elsif ( $options{action} eq "make_seq" and $options{seq_type} eq "axt" ) {
@@ -643,7 +663,8 @@ sub get_intergen_info {
 
     # my $loc_snp_pos    = shift;
     # my $loc_alt        = shift;
-    my ( $loc_snp_pos, $loc_alt, $enable_calcs ) = @_; #gets values of abs. snp pos, 
+    my ( $loc_snp_pos, $loc_alt, $enable_calcs )
+        = @_;    #gets values of abs. snp pos,
     my $loc_locus_name = "";
     my %locus_info_h;
     my $snp_gene_pos;
@@ -652,7 +673,8 @@ sub get_intergen_info {
     my ( $tang, $gd, $blossum45, $pam30 );
     my $loc_AACI_flag = "----";
 
-    foreach my $key ( sort keys %intergenic ) {
+    foreach my $key ( sort keys %intergenic )
+    {            #looking for positions of intergenic snps
 
         if (   $loc_snp_pos > scalar $intergenic{$key}{'start'}
             && $loc_snp_pos < scalar $intergenic{$key}{'end'} )
@@ -675,7 +697,7 @@ sub get_intergen_info {
         my $loc_nuc_seq = $intergenic{$loc_locus_name}{"sequence"};
         my $igen_genes  = $intergenic{$loc_locus_name}{"igen_genes"};
 
-        #     if ( $loc_strand == 1 ) {
+        #     if ( $loc_strand == 1 ) {Rv1132
         $snp_gene_pos = ( ( $loc_snp_pos - $loc_start ) + 1 );
 
         #     }
@@ -690,10 +712,11 @@ sub get_intergen_info {
         #     elsif ( $loc_start > $loc_end ) {
         #         $gene_length = ( $loc_start - $loc_end ) + 1;
         #     }
-        my $loc_ref = substr( $loc_nuc_seq, $snp_gene_pos - 1, 1 );
-        my $codon_nbr = int( ( $snp_gene_pos - 1 ) / 3 ) + 1;
-        my @codons        = unpack( "(A3)*", $loc_nuc_seq );
-        my $res_codon     = lc( $codons[ $codon_nbr - 1 ] );
+        my $loc_ref
+            = substr( $loc_nuc_seq, $snp_gene_pos - 1, 1 );    #ref letter
+        my $codon_nbr = int( ( $snp_gene_pos - 1 ) / 3 ) + 1;  #codon position
+        my @codons = unpack( "(A3)*", $loc_nuc_seq );          # nbr of codons
+        my $res_codon = lc( $codons[ $codon_nbr - 1 ] );
         my $loc_codon_pos = ( ( $codon_nbr * 3 ) - $snp_gene_pos );
         if ( $loc_codon_pos == 2 ) {
             $loc_codon_pos = 0;
@@ -848,7 +871,7 @@ sub open_single_vcf {
     # exit;
 
     my $elapsed = tv_interval( $t0, [gettimeofday] );
-    print "-" x 50 . "\n\tTime elapsed:\t$elapsed\n" if $options{debug};
+    print "-" x 50 . "\n\tTime elapsed:\t$elapsed\n" if $options{debug} and $options{vcf} ne "all";
 
 }
 
@@ -910,11 +933,18 @@ sub print_locus_info {
         elsif ( $loc_start > $loc_end ) {
             $gene_length = ( $loc_start - $loc_end ) + 1;
         }
-        my $loc_ref = substr( $loc_nuc_seq, $snp_gene_pos - 1, 1 );
-        my $codon_nbr = int( ( $snp_gene_pos - 1 ) / 3 ) + 1;
-        my @codons        = unpack( "(A3)*", $loc_nuc_seq );
-        my $res_codon     = lc( $codons[ $codon_nbr - 1 ] );
-        my $loc_codon_pos = ( ( $codon_nbr * 3 ) - $snp_gene_pos );
+        my $loc_ref = substr( $loc_nuc_seq, $snp_gene_pos - 1, 1 )
+            ;    #reference target letter
+        my $codon_nbr = int( ( $snp_gene_pos - 1 ) / 3 )
+            + 1;    #number of target codon from start
+        my @codons = unpack( "(A3)*", $loc_nuc_seq );     # codons of gene
+        my $res_codon = lc( $codons[ $codon_nbr - 1 ] )
+            ;    # letters from target codon in low case
+        my $loc_codon_pos = ( ( $codon_nbr * 3 ) - $snp_gene_pos )
+            ;    # position letter in codon (0,1,2)
+         # print "$loc_ref\n$codon_nbr\n$res_codon\n$loc_codon_pos\n" . scalar(@codons) . "\n";
+         # exit;
+
         if ( $loc_codon_pos == 2 ) {
             $loc_codon_pos = 0;
         }
@@ -928,13 +958,25 @@ sub print_locus_info {
         substr $alt_res_codon, $loc_codon_pos, 1, $loc_alt;
         my $ref_aa = codon2aa($res_codon);
         my $alt_aa = codon2aa($alt_res_codon);
-        if ( $ref_aa eq $alt_aa and $alt_aa ne "X" and $alt_aa ne "BAD_CODON"  and $ref_aa ne "BAD_CODON" ) {
+        if (    $ref_aa eq $alt_aa
+            and $alt_aa ne "X"
+            and $alt_aa ne "BAD_CODON"
+            and $ref_aa ne "BAD_CODON" )
+        {
             $snp_type = "synonymous";
         }
-        elsif ( $ref_aa ne $alt_aa and $alt_aa ne "X"  and $alt_aa ne "BAD_CODON" and $ref_aa ne "BAD_CODON" ) {
+        elsif ( $ref_aa ne $alt_aa
+            and $alt_aa ne "X"
+            and $alt_aa ne "BAD_CODON"
+            and $ref_aa ne "BAD_CODON" )
+        {
             $snp_type = "missense";
         }
-        elsif ( $ref_aa ne $alt_aa and $alt_aa eq "X"  and $alt_aa ne "BAD_CODON"  and $ref_aa ne "BAD_CODON") {
+        elsif ( $ref_aa ne $alt_aa
+            and $alt_aa eq "X"
+            and $alt_aa ne "BAD_CODON"
+            and $ref_aa ne "BAD_CODON" )
+        {
             $snp_type = "nonsense";
 
         }
@@ -999,7 +1041,8 @@ sub print_locus_info {
             "$loc_locus_name\t$loc_snp_pos\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$snp_type\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n"
             if $options{lvl} == 3
             and $snp_type eq "missense";
-            # and $loc_AACI_flag ne "----";
+
+        # and $loc_AACI_flag ne "----";
 
         print
             "$loc_locus_name\t$loc_snp_pos\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$snp_type\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n"
@@ -1013,8 +1056,9 @@ sub print_locus_info {
         $snp_per_gene_h{$loc_locus_name}{$loc_snp_pos}
             = "\t$snp$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$snp_type\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag"
             if $options{lvl} == 6;
+
         # if ( $options{lvl} == 5 or $options{lvl} == 6 ) {
-           
+
         #     foreach my $key ( sort keys %snp_per_gene_h ) {
 
         #         my $key2_count = 0;
@@ -1085,30 +1129,29 @@ sub print_locus_info {
 
 }
 
-
 sub print_grouped_info {
 
-     if ( $options{lvl} == 5 or $options{lvl} == 6) {
-           
-            foreach my $key ( sort keys %snp_per_gene_h ) {
+    if ( $options{lvl} == 5 or $options{lvl} == 6 ) {
 
-                my $key2_count = 0;
+        foreach my $key ( sort keys %snp_per_gene_h ) {
 
-                foreach my $key2 ( sort keys %{ $snp_per_gene_h{$key} } ) {
-                    $key2_count++;
-                    if ( $key2_count == 1 ) {
-                        print "$key" . "\t"
-                            . $database{$key}{'product'} . "\t"
-                            . "\n\t$key2$snp_per_gene_h{$key}{$key2}\n";
+            my $key2_count = 0;
 
-                    }
-                    else {
-                        print "\t$key2$snp_per_gene_h{$key}{$key2}\n";
-                    }
+            foreach my $key2 ( sort keys %{ $snp_per_gene_h{$key} } ) {
+                $key2_count++;
+                if ( $key2_count == 1 ) {
+                    print "$key" . "\t"
+                        . $database{$key}{'product'} . "\t"
+                        . "\n\t$key2$snp_per_gene_h{$key}{$key2}\n";
+
                 }
-
+                else {
+                    print "\t$key2$snp_per_gene_h{$key}{$key2}\n";
+                }
             }
+
         }
+    }
 
     undef %snp_per_gene_h;
 }
@@ -2389,7 +2432,6 @@ sub open_multiple_vcfs {
     my $out_header = "";
     my @toR_a;
 
-
     open( my $out_fh, '>', 'toR.csv' ) if $options{toR};
 
     foreach my $file (@files) {
@@ -2449,20 +2491,15 @@ sub open_multiple_vcfs {
     &print_unique_snp_info( \%all_snp_h, $count_f );
     if ( $options{toR} ) {
 
-        
         foreach my $val (@toR_a) {
             print $out_fh $val;
         }
 
-        
-     
-       
         # for my $row (@toR_a) {
-      
+
         #     print $#$row;
 
         #   for my $column (0 .. $#$row) {
-
 
         #     push(@{$transposed[$column]}, $row->[$column]);
         #   }
@@ -2473,7 +2510,7 @@ sub open_multiple_vcfs {
         #       print $out_fh "$new_col\n","";
         #   }
         #   # print "\n";
-        # }        
+        # }
     }
 
 }
@@ -3221,10 +3258,10 @@ sub test5 {
     my $start          = time;
     my $char_count     = 0;
     my $check_ref_used = 0;
-    my $pb=".";
-    
+    my $pb             = ".";
+
     print "Reading files:\n";
-    open (my $fh_out,">", $options{o}) if $options{o} ne "";
+    open( my $fh_out, ">", $options{o} ) if $options{o} ne "";
 
     foreach my $file (@files) {
 
@@ -3285,13 +3322,14 @@ sub test5 {
         close $fh;
         $char_count = 0;
         local $| = 1;
-        # my $pb =".";
-        print  "\b$pb" if $options{debug};
-        $pb .= ".";
 
+        # my $pb =".";
+        print "\b$pb" if $options{debug};
+        $pb .= ".";
 
     }
     print " done!\n";
+
     # system("clear");
     # print "-" x 50 . "\n";
 
@@ -3306,9 +3344,11 @@ sub test5 {
             }
 
         }
-        
-        print ">" . basename($file, ".vcf") . "\n$res_seq\n" if $options{o} eq  "";
-        print $fh_out ">" . basename($file, ".vcf") . "\n$res_seq\n" if $options{o} ne "";
+
+        print ">" . basename( $file, ".vcf" ) . "\n$res_seq\n"
+            if $options{o} eq "";
+        print $fh_out ">" . basename( $file, ".vcf" ) . "\n$res_seq\n"
+            if $options{o} ne "";
 
     }
 
@@ -3341,12 +3381,13 @@ sub test5 {
         foreach my $key ( sort keys %seq_per_file_h ) {
 
             print ">$key\n" . $seq_per_file_h{$key}{'aa_pos'} . "\n";
-           
+
         }
         my $duration = time - $start;
     }
 
-    print "\nWork was finished. The $options{o} file was saved.\n" if $options{o} ne "";
+    print "\nWork was finished. The $options{o} file was saved.\n"
+        if $options{o} ne "";
 
     # print "Execution time: $duration s\n";
 
@@ -3422,13 +3463,25 @@ sub get_locus_info {
         substr $alt_res_codon, $loc_codon_pos, 1, $loc_alt;
         my $ref_aa = codon2aa($res_codon);
         my $alt_aa = codon2aa($alt_res_codon);
-        if ( $ref_aa eq $alt_aa and $alt_aa ne "X" and $alt_aa ne "BAD_CODON" and $ref_aa ne "BAD_CODON" ) {
+        if (    $ref_aa eq $alt_aa
+            and $alt_aa ne "X"
+            and $alt_aa ne "BAD_CODON"
+            and $ref_aa ne "BAD_CODON" )
+        {
             $snp_type = "synonymous";
         }
-        elsif ( $ref_aa ne $alt_aa and $alt_aa ne "X" and $alt_aa ne "BAD_CODON" and $ref_aa ne "BAD_CODON" ) {
+        elsif ( $ref_aa ne $alt_aa
+            and $alt_aa ne "X"
+            and $alt_aa ne "BAD_CODON"
+            and $ref_aa ne "BAD_CODON" )
+        {
             $snp_type = "missense";
         }
-        elsif ( $ref_aa ne $alt_aa and $alt_aa eq "X" and $alt_aa ne "BAD_CODON"  and $ref_aa ne "BAD_CODON" ) {
+        elsif ( $ref_aa ne $alt_aa
+            and $alt_aa eq "X"
+            and $alt_aa ne "BAD_CODON"
+            and $ref_aa ne "BAD_CODON" )
+        {
             $snp_type = "nonsense";
 
         }
@@ -3437,7 +3490,7 @@ sub get_locus_info {
             $tang = calcutalte_tang_index( $ref_aa, $alt_aa );
             $gd = calculate_grantham_matrix( $ref_aa, $alt_aa );
             $blossum45 = calculate_blosum45_matrix( $ref_aa, $alt_aa );
-            $pam30 = calculate_pam30_matrix( $ref_aa, $alt_aa );            
+            $pam30 = calculate_pam30_matrix( $ref_aa, $alt_aa );
             if ( $tang < TANG_TH ) {
 
                 substr $loc_AACI_flag, 0, 1, "+";
@@ -3863,7 +3916,8 @@ sub load_coding_snp {
     # if ($position eq "489935_G>C"){print "!!!!!\n"};
     # my $snp_class_type = $snp_list_type_h{$options{snp_list}};
     if ( exists $snp_list_h{$snp_class_name}{$query_locus}{$query_snp} ) {
-        return $snp_list_h{$snp_class_name}{$query_locus}{$query_snp}{'note'} . "[$query_locus:$query_snp]";
+        return $snp_list_h{$snp_class_name}{$query_locus}{$query_snp}{'note'}
+            . "[$query_locus:$query_snp]";
     }
     elsif ( exists $snp_list_h{$snp_class_name}{$position} ) {
         return $snp_list_h{$snp_class_name}{$position}{'note'};
