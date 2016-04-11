@@ -89,7 +89,7 @@ if ( $options{action} eq "rf" ) {    #extract db as dump file
 }
 
 elsif ( $options{action} eq "check_snp" )
-{    #check existance of snp from database
+{                                    #check existance of snp from database
 
     if ( $options{snp_list} ne "" && $options{db} ne "" ) {
         &load_db( $options{db} );
@@ -112,7 +112,6 @@ elsif ( $options{action} eq "check_snp" )
     }
 
 }
-
 
 elsif ( $options{action} eq "check_list" ) {
 
@@ -353,7 +352,6 @@ sub load_db {
 #
 # ------------------------------------------------------------
 
-
 sub get_intergen_info {
 
     # my $loc_snp_pos    = shift;
@@ -425,8 +423,6 @@ sub get_intergen_info {
 
         my $alt_res_codon = $res_codon;
         substr $alt_res_codon, $loc_codon_pos, 1, $loc_alt;
-
-      
 
         %locus_info_h = (
             "locus" => $loc_locus_name,
@@ -857,7 +853,6 @@ sub print_indel_info {
 
         }
 
-    
         if ( $snp_type eq "insertion" ) {
             $full_formated_indel
                 = lc($ref) . "/" . lc($ref) . uc($indel);
@@ -964,7 +959,6 @@ sub get_indel_info {
         if ( length($alt) > length($ref) ) {
             $snp_type = "insertion";
 
-       
             $indel = $alt;
             if ( $loc_strand == -1 ) {
                 $indel = reverse($indel);
@@ -1094,7 +1088,6 @@ sub get_indel_info {
     }
 }
 
-
 # ------------------------------------------------------------
 #
 #
@@ -1149,7 +1142,7 @@ sub use_snp_classification_intergenic {
                 last;
             }
 
-     #         $loc_ref_name = $+{ref_genome};
+            #         $loc_ref_name = $+{ref_genome};
         }
         if ( $class_found == 0 ) {
             print "\t---";
@@ -1339,7 +1332,6 @@ sub use_snp_classification_coding {
 #         }
 #     }
 # }
-
 
 sub make_axt_sequence {
 
@@ -1741,8 +1733,8 @@ sub open_multiple_vcfs {
         foreach my $val (@toR_a) {
             print $out_fh $val;
         }
-
-   
+    }
+}
 
 # # ------------------------------------------------------------
 # #
@@ -2402,46 +2394,46 @@ sub make_seq_nc {
                     if ( $options{codon} ) {
                         $seq_per_file_h{$file}{'seq'} .= $tmp{"alt_codon"};
                         $seq_per_file_h{$file}{'aa_pos'}
-                        .= $char_count . ":"
-                        . $tmp{"locus"} . ":"
-                        . $tmp{"snp_genome_pos"} . ":"
-                        . $tmp{"ref_aa_short"}
-                        . $tmp{"aa_pos"}
-                        . $tmp{"alt_aa_short"} . ":"
-                        . $4 . "|";
-                    $seq_per_file_h{$file}{ $tmp{"snp_genome_pos"} }
-                        = $tmp{"alt_codon"};
+                            .= $char_count . ":"
+                            . $tmp{"locus"} . ":"
+                            . $tmp{"snp_genome_pos"} . ":"
+                            . $tmp{"ref_aa_short"}
+                            . $tmp{"aa_pos"}
+                            . $tmp{"alt_aa_short"} . ":"
+                            . $4 . "|";
+                        $seq_per_file_h{$file}{ $tmp{"snp_genome_pos"} }
+                            = $tmp{"alt_codon"};
 
-                    # if ($check_ref_used ==0){
-                    $seq_ref_h{ $tmp{"snp_genome_pos"} }
-                        = $tmp{"ref_codon"};
-                    $all_pos_h{ $tmp{"snp_genome_pos"} }
-                        = $tmp{"snp_genome_pos"};
+                        # if ($check_ref_used ==0){
+                        $seq_ref_h{ $tmp{"snp_genome_pos"} }
+                            = $tmp{"ref_codon"};
+                        $all_pos_h{ $tmp{"snp_genome_pos"} }
+                            = $tmp{"snp_genome_pos"};
 
                     }
                     else {
-                         $seq_per_file_h{$file}{'seq'} .= $tmp{"alt"};
+                        $seq_per_file_h{$file}{'seq'} .= $tmp{"alt"};
                         $seq_per_file_h{$file}{'aa_pos'}
-                        .= $char_count . ":"
-                        . $tmp{"locus"} . ":"
-                        . $tmp{"snp_genome_pos"} . ":"
-                        . $tmp{"ref_aa_short"}
-                        . $tmp{"aa_pos"}
-                        . $tmp{"alt_aa_short"} . ":"
-                        . $4 . "|";
-                    $seq_per_file_h{$file}{ $tmp{"snp_genome_pos"} }
-                        = $tmp{"alt"};
+                            .= $char_count . ":"
+                            . $tmp{"locus"} . ":"
+                            . $tmp{"snp_genome_pos"} . ":"
+                            . $tmp{"ref_aa_short"}
+                            . $tmp{"aa_pos"}
+                            . $tmp{"alt_aa_short"} . ":"
+                            . $4 . "|";
+                        $seq_per_file_h{$file}{ $tmp{"snp_genome_pos"} }
+                            = $tmp{"alt"};
 
-                    # if ($check_ref_used ==0){
-                    $seq_ref_h{ $tmp{"snp_genome_pos"} }
-                        = $tmp{"ref"};
-                    $all_pos_h{ $tmp{"snp_genome_pos"} }
-                        = $tmp{"snp_genome_pos"};
+                        # if ($check_ref_used ==0){
+                        $seq_ref_h{ $tmp{"snp_genome_pos"} }
+                            = $tmp{"ref"};
+                        $all_pos_h{ $tmp{"snp_genome_pos"} }
+                            = $tmp{"snp_genome_pos"};
 
                     }
 
        # $seq_per_file_h{$file}{$tmp{"snp_genome_pos"}}= $tmp{"alt_aa_short"};
-                    
+
                     # }
 
                 }
