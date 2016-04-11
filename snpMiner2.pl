@@ -78,7 +78,7 @@ GetOptions(
     'list=s',     "DP=s",    "target=s", "tang_th=s",
     "locus=s",    "prosite", "o=s",      "snp=s",
     "seq_type=s", "indel",   "lvl=s",    "debug",
-    "intergenic", "toR"
+    "intergenic", "toR",     "codon"
 );
 
 &show_help( "verbose" => 99, -utf8 ) if $options{help};
@@ -191,15 +191,29 @@ elsif ( $options{action} eq "t4" ) {
     &test4( $options{vcf} );
 
 }
-elsif ( $options{action} eq "t5" || $options{action} eq "t5.1" ) {
+elsif ($options{action} eq "t5"
+    || $options{action} eq "t5.1"
+    || $options{action} eq "make_seq_aa" )
+{
 
     &load_db( $options{db} );
 
-    &test5( $options{vcf} );
+    &make_seq_aa( $options{vcf} );
 
 }
 
-elsif ( $options{action} eq "annotation" and $options{vcf} ne "" and $options{vcf} ne "all"  ) {
+elsif ( $options{action} eq "t6" || $options{action} eq "make_seq_nc" ) {
+
+    &load_db( $options{db} );
+
+    &make_seq_nc( $options{vcf} );
+
+}
+
+elsif ( $options{action} eq "annotation"
+    and $options{vcf} ne ""
+    and $options{vcf} ne "all" )
+{
     $options{lvl} = 1 if $options{lvl} eq "";
     if (   $options{lvl} == 1
         || $options{lvl} == 2
@@ -227,7 +241,7 @@ elsif ( $options{action} eq "annotation" and $options{vcf} eq "all" ) {
         my @files = glob('*.vcf');
         foreach my $file (@files) {
             print "-" x 60 . "\n$file\n" . "-" x 60 . "\n" if $options{debug};
-            open_single_vcf( $file, 1 );                        
+            open_single_vcf( $file, 1 );
         }
     }
 
@@ -871,7 +885,8 @@ sub open_single_vcf {
     # exit;
 
     my $elapsed = tv_interval( $t0, [gettimeofday] );
-    print "-" x 50 . "\n\tTime elapsed:\t$elapsed\n" if $options{debug} and $options{vcf} ne "all";
+    print "-" x 50 . "\n\tTime elapsed:\t$elapsed\n"
+        if $options{debug} and $options{vcf} ne "all";
 
 }
 
@@ -3240,7 +3255,7 @@ sub test4 {
     # print "Execution time: $duration s\n";
 }
 
-sub test5 {
+sub make_seq_aa {
     my @files       = glob('*.vcf');
     my $class_found = 0;
     my $class_query = "";
@@ -3260,12 +3275,12 @@ sub test5 {
     my $check_ref_used = 0;
     my $pb             = ".";
 
-    print "Reading files:\n";
+    print "Reading files:\n" if $options{o} ne "";
     open( my $fh_out, ">", $options{o} ) if $options{o} ne "";
 
     foreach my $file (@files) {
 
-        # print "$file";
+        print "$file\n" if $options{o} ne "";
         my @res_a;
         open( my $fh, "<", $file )
             or croak "cannot open < $file: $!";
@@ -3324,11 +3339,11 @@ sub test5 {
         local $| = 1;
 
         # my $pb =".";
-        print "\b$pb" if $options{debug};
-        $pb .= ".";
+        # print "\b$pb"; if $options{debug};
+        # $pb .= ".";
 
     }
-    print " done!\n";
+    print "done!\n" if $options{o} ne "";
 
     # system("clear");
     # print "-" x 50 . "\n";
@@ -3386,7 +3401,183 @@ sub test5 {
         my $duration = time - $start;
     }
 
-    print "\nWork was finished. The $options{o} file was saved.\n"
+    print "Work was finished. The $options{o} file was saved.\n"
+        if $options{o} ne "";
+
+    # print "Execution time: $duration s\n";
+
+}
+
+sub make_seq_nc {
+    my @files       = glob('*.vcf');
+    my $class_found = 0;
+    my $class_query = "";
+    my $query_locus = "";
+    my $query_snp   = "";
+    my @class_a;
+    my $snp_count        = 0;
+    my $tab              = "";
+    my $res              = "";
+    my $loc_ref_name     = "";
+    my $loc_snp_notation = "";
+    my %seq_per_file_h;
+    my %seq_ref_h;
+    my %all_pos_h;
+    my $start          = time;
+    my $char_count     = 0;
+    my $check_ref_used = 0;
+    my $pb             = ".";
+    my $file_count     = 0;
+    print "Total files: " . scalar(@files) . "\n" if $options{o} ne "";
+    open( my $fh_out, ">", $options{o} ) if $options{o} ne "";
+
+    foreach my $file (@files) {
+        $file_count++;
+        print "$file_count) $file\n" if $options{o} ne "";
+        my @res_a;
+        open( my $fh, "<", $file )
+            or croak "cannot open < $file: $!";
+        while (<$fh>) {
+            my $str = "$_";
+            $str =~ /.*($ref_genome_name)/x;
+            $loc_ref_name = $1;
+            $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
+            if ( length($2) == 1 && length($3) == 1 ) {
+
+                my %tmp = &get_locus_info( $1, $3 );
+                if ( $loc_ref_name ne $ref_genome_name ) {
+                    print
+                        "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                    last;
+                }
+                if ($tmp{'locus'} ne ""
+
+                    # && $tmp{'alt_aa_long'} ne 'STOP'
+                    # && $tmp{'ref_aa_long'} ne 'STOP'
+                    && $tmp{'alt_aa_long'} ne 'BAD_CODON'
+                    && $tmp{'ref_aa_long'} ne 'BAD_CODON'
+                    && $4 > 10
+                    )
+                {
+                    $char_count++;
+                    if ( $options{codon} ) {
+                        $seq_per_file_h{$file}{'seq'} .= $tmp{"alt_codon"};
+                        $seq_per_file_h{$file}{'aa_pos'}
+                        .= $char_count . ":"
+                        . $tmp{"locus"} . ":"
+                        . $tmp{"snp_genome_pos"} . ":"
+                        . $tmp{"ref_aa_short"}
+                        . $tmp{"aa_pos"}
+                        . $tmp{"alt_aa_short"} . ":"
+                        . $4 . "|";
+                    $seq_per_file_h{$file}{ $tmp{"snp_genome_pos"} }
+                        = $tmp{"alt_codon"};
+
+                    # if ($check_ref_used ==0){
+                    $seq_ref_h{ $tmp{"snp_genome_pos"} }
+                        = $tmp{"ref_codon"};
+                    $all_pos_h{ $tmp{"snp_genome_pos"} }
+                        = $tmp{"snp_genome_pos"};
+
+                    }
+                    else {
+                         $seq_per_file_h{$file}{'seq'} .= $tmp{"alt"};
+                        $seq_per_file_h{$file}{'aa_pos'}
+                        .= $char_count . ":"
+                        . $tmp{"locus"} . ":"
+                        . $tmp{"snp_genome_pos"} . ":"
+                        . $tmp{"ref_aa_short"}
+                        . $tmp{"aa_pos"}
+                        . $tmp{"alt_aa_short"} . ":"
+                        . $4 . "|";
+                    $seq_per_file_h{$file}{ $tmp{"snp_genome_pos"} }
+                        = $tmp{"alt"};
+
+                    # if ($check_ref_used ==0){
+                    $seq_ref_h{ $tmp{"snp_genome_pos"} }
+                        = $tmp{"ref"};
+                    $all_pos_h{ $tmp{"snp_genome_pos"} }
+                        = $tmp{"snp_genome_pos"};
+
+                    }
+
+       # $seq_per_file_h{$file}{$tmp{"snp_genome_pos"}}= $tmp{"alt_aa_short"};
+                    
+                    # }
+
+                }
+
+            }
+
+        }
+        close $fh;
+        $char_count = 0;
+        local $| = 1;
+
+        # my $pb =".";
+        # print "\b$pb"; if $options{debug};
+        # $pb .= ".";
+
+    }
+    print "done!\n" if $options{o} ne "";
+
+    # system("clear");
+    # print "-" x 50 . "\n";
+
+    foreach my $file (@files) {
+        my $res_seq = "";
+        foreach my $key ( sort { $a <=> $b } keys %all_pos_h ) {
+            if ( exists $seq_per_file_h{$file}{$key} ) {
+                $res_seq .= $seq_per_file_h{$file}{$key};
+            }
+            else {
+                $res_seq .= $seq_ref_h{$key};
+            }
+
+        }
+
+        print ">" . basename( $file, ".vcf" ) . "\n$res_seq\n"
+            if $options{o} eq "";
+        print $fh_out ">" . basename( $file, ".vcf" ) . "\n$res_seq\n"
+            if $options{o} ne "";
+
+    }
+
+    # ---------------------------------------------------------
+    # my $ref_seq = "";
+    # foreach my $key ( sort { $a <=> $b } keys %all_pos_h ) {
+    #     $ref_seq .= $seq_ref_h{$key};
+    # }
+    # print ">$ref_genome_name\t" . length($ref_seq) . "\n$ref_seq\n";
+    # ----------------------------------------------------------
+
+    # print Dumper(sort {$a <=> $b} %seq_ref_h);
+    # if ($check_ref_used == 0){
+    # print ">$ref_genome_name\n";
+    # foreach my $key ( sort { $a <=> $b} keys  %seq_ref_h ) {
+    #     print $seq_ref_h{$key};
+
+    # }
+    # print "\n";
+    # $check_ref_used=1;
+    # }
+    #-----------------------------------------------
+    # foreach my $key ( sort keys %seq_per_file_h ) {
+
+    #     print ">$key\n" . $seq_per_file_h{$key}{'seq'} . "\n";
+    # }
+
+    if ( $options{action} eq "t5.1" ) {
+        print "-" x 50 . "\n";
+        foreach my $key ( sort keys %seq_per_file_h ) {
+
+            print ">$key\n" . $seq_per_file_h{$key}{'aa_pos'} . "\n";
+
+        }
+        my $duration = time - $start;
+    }
+
+    print "Work was finished. The $options{o} file was saved.\n"
         if $options{o} ne "";
 
     # print "Execution time: $duration s\n";
@@ -4235,13 +4426,36 @@ Description....
 
 Description....
 
+=item B<make_seq_aa>  
+
+Description....
+
+=item B<make_seq_nc>  
+
+
+=item --codon  
+
+Description....
+
+
+Description....
+
+
 =back
 
 =head1 commands
 
 =over 20
 
-=item B<--vcf> <vcf file>   
+=item B<-vcf> <vcf file>   
+
+Description....
+
+=item B<-lvl> <1..6>   
+
+Description....
+
+=item B<-indel>    
 
 Description....
 
