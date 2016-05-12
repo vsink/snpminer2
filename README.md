@@ -91,23 +91,26 @@ annotation of vcf file
 
 ```
 ./snpMiner2.pl -db <db_name> -action annotation -vcf <vcf_file> > output_file
-./snpMiner2.pl -db <db_name> -action annotation.1 -vcf <vcf_file> > output_file
-./snpMiner2.pl -db <db_name> -action annotation.11 -vcf <vcf_file> > output_file
-./snpMiner2.pl -db <db_name> -action annotation.2 -vcf <vcf_file> > output_file
-./snpMiner2.pl -db <db_name> -action annotation.3 -vcf <vcf_file> > output_file
+./snpMiner2.pl -db <db_name> -action annotation -indel -vcf <vcf_file> > output_file
+./snpMiner2.pl -db <db_name> -action annotation -vcf all > output_file
+./snpMiner2.pl -db <db_name> -action annotation -lvl 2 -vcf all > output_file
+./snpMiner2.pl -db <db_name> -action annotation -lvl 3 -vcf all > output_file
+./snpMiner2.pl -db <db_name> -action annotation -lvl 4 -vcf all > output_file
+./snpMiner2.pl -db <db_name> -action annotation -lvl 5 -vcf all > output_file
+./snpMiner2.pl -db <db_name> -action annotation -lvl 6 -vcf all > output_file
+./snpMiner2.pl -db <db_name> -action annotation -debug -vcf all > output_file
+
 ```
 unique SNPs for all vcf files in current directory:
 
 ```
 ./snpMiner2.pl -db <db_name> -action uniq > output_file
-./snpMiner2.pl -db <db_name> -action uniq.1 > output_file
-./snpMiner2.pl -db <db_name> -action uniq.2 > output_file
-./snpMiner2.pl -db <db_name> -action uniq.3 > output_file
-./snpMiner2.pl -db <db_name> -action uniq.4 > output_file
-./snpMiner2.pl -db <db_name> -action uniq.5 > output_file
-./snpMiner2.pl -db <db_name> -action uniq.6 > output_file
-./snpMiner2.pl -db <db_name> -action uniq.7 > output_file
-
+./snpMiner2.pl -db <db_name> -action uniq -lvl 1 > output_file
+./snpMiner2.pl -db <db_name> -action uniq -lvl 2 > output_file
+./snpMiner2.pl -db <db_name> -action uniq -lvl 3 > output_file
+./snpMiner2.pl -db <db_name> -action uniq -lvl 4 > output_file
+./snpMiner2.pl -db <db_name> -action uniq -lvl 5 > output_file
+./snpMiner2.pl -db <db_name> -action uniq -lvl 6 > output_file
 ```
 
 check SNPs 
@@ -117,16 +120,45 @@ check SNPs
 
 ```
 
+information about gene:
+
+```
+./snpMiner2.pl -db tb -debug  -action info -locus Rv3919c -snp "276A>C"
+
+```
+
+it will create a report like that:
+
+--------------------------------------------------
+Locus: Rv3919c (4407528 - 4408202) 
+Product: rRNA small subunit methyltransferase G
+Note: glucose-inhibited division protein B
+Gene length (bp): 675
+GC (%): 66.1
+..................................................
+DNA :
+  ATGTCTCCGATCGAGCCCGCGGCGTCTGCGATCTTCGGACCGCGGCTTGGCCTTGCTCGGCGGTACGCCGAAGCGTTGGCGGGACCCGGTGTGGAGCGGGGGCTGGTGGGACCCCGCGAAGTCGGTAGGCTATGGGACCGGCATCTACTGAACTGCGCCGTGATCGGTGAGCTCCTCGAACGCGGTGACCGGGTCGTGGATATCGGTAGCGGAGCCGGGTTGCCGGGCGTGCCATTGGCGATAGCGCGGCCGGACCTCCAGGTAGTTCTCCTAGAACCGCTACTGCGCCGCACCGAGTTTCTTCGAGAGATGGTGACAGATCTGGGCGTGGCCGTTGAGATCGTGCGGGGGCGCGCCGAGGAGTCCTGGGTGCAGGACCAATTGGGCGGCAGCGACGCTGCGGTGTCACGGGCGGTGGCCGCGTTGGACAAGTTGACGAAATGGAGCATGCCGTTGATACGGCCGAACGGGCGAATGCTCGCCATCAAAGGCGAGCGGGCTCACGACGAAGTACGGGAGCACCGGCGTGTGATGATCGCATCGGGCGCGGTTGATGTCAGGGTGGTGACATGTGGCGCGAACTATTTGCGTCCGCCCGCGACCGTGGTGTTCGCACGACGTGGAAAGCAGATCGCCCGAGGGTCGGCACGGATGGCGAGTGGAGGGACGGCGTGA
+..................................................
+Protein:
+  MSPIEPAASAIFGPRLGLARRYAEALAGPGVERGLVGPREVGRLWDRHLLNCAVIGELLERGDRVVDIGSGAGLPGVPLAIARPDLQVVLLEPLLRRTEFLREMVTDLGVAVEIVRGRAEESWVQDQLGGSDAAVSRAVAALDKLTKWSMPLIRPNGRMLAIKGERAHDEVREHRRVMIASGAVDVRVVTCGANYLRPPATVVFARRGKQIARGSARMASGGTAX
+Molecular mass (Da) approx. : 24013.8914
+Protein length (aa): 224
+..................................................
+SNP:
+  ATGTCTCCGATCGAGCCCGCGGCGTCTGCGATCTTCGGACCGCGGCTTGGCCTTGCTCGGCGGTACGCCGAAGCGTTGGCGGGACCCGGTGTGGAGCGGGGGCTGGTGGGACCCCGCGAAGTCGGTAGGCTATGGGACCGGCATCTACTGAACTGCGCCGTGATCGGTGAGCTCCTCGAACGCGGTGACCGGGTCGTGGATATCGGTAGCGGAGCCGGGTTGCCGGGCGTGCCATTGGCGATAGCGCGGCCGGACCTCCAGGTAGTTCTCCTAGA[A>C]CCGCTACTGCGCCGCACCGAGTTTCTTCGAGAGATGGTGACAGATCTGGGCGTGGCCGTTGAGATCGTGCGGGGGCGCGCCGAGGAGTCCTGGGTGCAGGACCAATTGGGCGGCAGCGACGCTGCGGTGTCACGGGCGGTGGCCGCGTTGGACAAGTTGACGAAATGGAGCATGCCGTTGATACGGCCGAACGGGCGAATGCTCGCCATCAAAGGCGAGCGGGCTCACGACGAAGTACGGGAGCACCGGCGTGTGATGATCGCATCGGGCGCGGTTGATGTCAGGGTGGTGACATGTGGCGCGAACTATTTGCGTCCGCCCGCGACCGTGGTGTTCGCACGACGTGGAAAGCAGATCGCCCGAGGGTCGGCACGGATGGCGAGTGGAGGGACGGCGTGA
+
+
+
 If you will use snpMiner2 in your work, please, cite us:
 
 ```
-Viacheslav V. Sinkov. (2015). snpminer2 v.0.2-alpha. Zenodo. 10.5281/zenodo.20917
+Viacheslav V. Sinkov. (2016). snpMiner2: vcf files annotation tool. Zenodo. 10.5281/zenodo.51052
 ```
 
 
 COPYRIGHT
 
-  © 2014-2015 Viacheslav V. Sinkov. The laboratory of Social and Epidemic Infections, 
+  © 2014-2016 Viacheslav V. Sinkov. The laboratory of Social and Epidemic Infections, 
 "Scientific Centre for Family Health and Human Reproduction Problems" 
 16, Timiriazeva st., Irkutsk, Russia.
   
