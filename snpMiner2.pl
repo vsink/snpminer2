@@ -35,7 +35,7 @@ use Time::HiRes qw(usleep ualarm gettimeofday tv_interval);
 no warnings qw/uninitialized/;
 
 use constant {
-    TANG_TH      => 0.4,
+    TANG_TH      => 0.4, #treshold for Tang index
     GD_TH        => 100,
     BLOSSUM45_TH => 0,
     PAM30_TH     => 0
@@ -44,13 +44,13 @@ use constant {
 # use Benchmark qw(:all) ;
 # my $t0 = Benchmark->new;
 
-my $genome_seq_obj      = "";        # BioSeq объект с геномом
-my $tmp_res_codon_seq   = "";
+my $GenomeSequenceBioSeq      = "";        # BioSeq объект с геномом
+# my $LocusInfoReader_res_codon_seq   = "";
 my $tree_codon_sequence = "";
 my $db_version          = "";
-my $snp_list_exists     = 0;
-my $ref_genome_name     = "";
-my $organism_name       = "";
+my $SNPListExists     = 0;
+my $RefGenomeName     = "";
+my $OrganismName       = "";
 my $version             = "0.3.1";
 my $about_msg
     = "Program: snpMiner2 (Tool for analysis of variable call format files)\n";
@@ -98,17 +98,24 @@ elsif ( $options{action} eq "check_snp" )
 
             &use_snp_classification_coding;
         }
+        if ($options{snp_list}  eq "?") {
+
+          while (my ($key, $value) = each %snp_list_h) {
+            print $key, "\n";
+        }
+      }
+
         elsif ( exists $snp_igpos_list_h{ $options{snp_list} } ) {
 
             # print "Yes, this is intergenic positions!!!\n";
             &use_snp_classification_intergenic( $options{snp_list} );
-        }
+          }
         else {
             print "The SNP classification name is not found!\n";
         }
     }
     else {
-        print "Use -cn key to set SNP classification name!\n";
+        print "Use -snp_list key to set SNP classification name!\n";
     }
 
 }
@@ -134,6 +141,21 @@ elsif ( $options{action} eq "t4" ) {
     &test4( $options{vcf} );
 
 }
+<<<<<<< HEAD
+elsif ( $options{action} eq "t5" || $options{action} eq "t5.1" || $options{action} eq "make_seq_aa" ) {
+
+    &load_db( $options{db} );
+
+    &make_seq_aa( $options{vcf} );
+
+}
+
+elsif ( $options{action} eq "t6" || $options{action} eq "make_seq_nc") {
+
+    &load_db( $options{db} );
+
+    &make_seq_nc( $options{vcf} );
+=======
 elsif ($options{action} eq "t5"
     || $options{action} eq "t5.1"
     || $options{action} eq "make_seq_aa" )
@@ -142,6 +164,7 @@ elsif ($options{action} eq "t5"
     &load_db( $options{db} );
 
     &make_seq_aa( $options{vcf} );
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
 
 }
 
@@ -331,13 +354,13 @@ sub load_db {
 
     #------------------------------------
     $db_version      = $database{options}{version};
-    $ref_genome_name = $database{options}{reference};
-    $organism_name   = $database{options}{organism_name};
-    $snp_list_exists
+    $RefGenomeName = $database{options}{reference};
+    $OrganismName   = $database{options}{organism_name};
+    $SNPListExists
         = scalar $database{options}{snp_list_exists}; #snp_list existance flag
     my $igpos_list_exists = scalar $database{options}{igpos_list_exists}
         ;                                             #snp_list existance flag
-    if ( $snp_list_exists == 1 ) {
+    if ( $SNPListExists == 1 ) {
         %snp_list_h = %{ $hash_ref->{dict}{snp_list}{coding} };    # snp_list
         if ( $igpos_list_exists == 1 ) {
             %snp_igpos_list_h = %{ $hash_ref->{dict}{snp_list}{intergenic} }
@@ -352,16 +375,283 @@ sub load_db {
 #
 # ------------------------------------------------------------
 
+<<<<<<< HEAD
+# sub annotate_vcf_new {
+#     my $t0 = [gettimeofday];
+#     my %vcf_data = &open_single_vcf( $options{vcf}, 1 );
+#     my %snp_per_gene_h;
+
+#     foreach my $key ( sort { $a <=> $b } keys %vcf_data ) {
+#         next if $vcf_data{$key}{locus} eq "";
+#         print
+#             "$vcf_data{$key}{locus}\t$key\t$vcf_data{$key}{snp}\t$vcf_data{$key}{ref_codon}/$vcf_data{$key}{alt_codon}\t$vcf_data{$key}{ref_aa_short}$vcf_data{$key}{aa_pos}$vcf_data{$key}{alt_aa_short}\t$vcf_data{$key}{snp_type}\t$vcf_data{$key}{product}\n"
+#             if $options{lvl} == 1 and $vcf_data{$key}{_type} eq "snp";
+#         print
+#             "$vcf_data{$key}{locus}\t$key\t$vcf_data{$key}{snp}\t$vcf_data{$key}{ref_codon}/$vcf_data{$key}{alt_codon}\t$vcf_data{$key}{ref_aa_short}$vcf_data{$key}{aa_pos}$vcf_data{$key}{alt_aa_short}\t$vcf_data{$key}{snp_type}\t$vcf_data{$key}{tang}\t$vcf_data{$key}{gd}\t$vcf_data{$key}{blossum45}\t$vcf_data{$key}{pam30}\t$vcf_data{$key}{AACI}\t$vcf_data{$key}{product}\n"
+#             if $options{lvl} == 2 and $vcf_data{$key}{_type} eq "snp";
+#         print
+#             "$vcf_data{$key}{locus}\t$key\t$vcf_data{$key}{snp}\t$vcf_data{$key}{ref_codon}/$vcf_data{$key}{alt_codon}\t$vcf_data{$key}{ref_aa_short}$vcf_data{$key}{aa_pos}$vcf_data{$key}{alt_aa_short}\t$vcf_data{$key}{snp_type}\t$vcf_data{$key}{tang}\t$vcf_data{$key}{gd}\t$vcf_data{$key}{blossum45}\t$vcf_data{$key}{pam30}\t$vcf_data{$key}{AACI}\t$vcf_data{$key}{product}\n"
+#             if $options{lvl} == 3
+#             and $vcf_data{$key}{AACI} ne "----"
+#             and $vcf_data{$key}{_type} eq "snp";
+#         print
+#             "$vcf_data{$key}{locus}\t$key\t$vcf_data{$key}{snp}\t$vcf_data{$key}{ref_codon}/$vcf_data{$key}{alt_codon}\t$vcf_data{$key}{ref_aa_short}$vcf_data{$key}{aa_pos}$vcf_data{$key}{alt_aa_short}\t$vcf_data{$key}{snp_type}\t$vcf_data{$key}{tang}\t$vcf_data{$key}{gd}\t$vcf_data{$key}{blossum45}\t$vcf_data{$key}{pam30}\t$vcf_data{$key}{AACI}\t$vcf_data{$key}{product}\n"
+#             if $options{lvl} == 4
+#             and $vcf_data{$key}{AACI} eq "++++"
+#             and $vcf_data{$key}{_type} eq "snp";
+
+#         #---------------------------------------------------------
+#         if ( $options{indel} ) {
+#             print
+#                 "$vcf_data{$key}{locus}\t$vcf_data{$key}{'snp_genome_pos'}\t$vcf_data{$key}{'snp_gene_pos'}$vcf_data{$key}{'short_indel_note'}$vcf_data{$key}{'indel'}\t$vcf_data{$key}{'full_formated_indel'}\t$vcf_data{$key}{'frame_shift'}\t$vcf_data{$key}{'snp_type'}\t$vcf_data{$key}{'product'}\n"
+#                 if $options{lvl} == 1 and $vcf_data{$key}{_type} eq "indel";
+#             print
+#                 "$vcf_data{$key}{locus}\t$vcf_data{$key}{'snp_genome_pos'}\t$vcf_data{$key}{'snp_gene_pos'}$vcf_data{$key}{'short_indel_note'}$vcf_data{$key}{'indel'}\t$vcf_data{$key}{'full_formated_indel'}\t$vcf_data{$key}{'frame_shift'}\t$vcf_data{$key}{'snp_type'}\t$vcf_data{$key}{tang}\t$vcf_data{$key}{gd}\t$vcf_data{$key}{blossum45}\t$vcf_data{$key}{pam30}\t$vcf_data{$key}{AACI}\t$vcf_data{$key}{product}\n"
+#                 if $options{lvl} == 2 and $vcf_data{$key}{_type} eq "indel";
+#             print
+#                 "$vcf_data{$key}{locus}\t$vcf_data{$key}{'snp_genome_pos'}\t$vcf_data{$key}{'snp_gene_pos'}$vcf_data{$key}{'short_indel_note'}$vcf_data{$key}{'indel'}\t$vcf_data{$key}{'full_formated_indel'}\t$vcf_data{$key}{'frame_shift'}\t$vcf_data{$key}{'snp_type'}\t$vcf_data{$key}{tang}\t$vcf_data{$key}{gd}\t$vcf_data{$key}{blossum45}\t$vcf_data{$key}{pam30}\t$vcf_data{$key}{AACI}\t$vcf_data{$key}{product}\n"
+#                 if $options{lvl} == 3
+#                 and $vcf_data{$key}{AACI} ne "----"
+#                 and $vcf_data{$key}{_type} eq "indel";
+#         }
+
+#         # }
+
+#         #---------------------------------------------------------
+#         $snp_per_gene_h{ $vcf_data{$key}{locus} }{$key}
+#             = "$vcf_data{$key}{snp}\t$vcf_data{$key}{'ref_codon'}/$vcf_data{$key}{'alt_codon'}\t$vcf_data{$key}{'ref_aa_short'}$vcf_data{$key}{'aa_pos'}$vcf_data{$key}{'alt_aa_short'}\t$vcf_data{$key}{'snp_type'}"
+#             if $options{lvl} == 5 and $vcf_data{$key}{_type} eq "snp";
+
+#         $snp_per_gene_h{ $vcf_data{$key}{locus} }{$key}
+#             = "$vcf_data{$key}{snp}\t$vcf_data{$key}{'ref_codon'}/$vcf_data{$key}{'alt_codon'}\t$vcf_data{$key}{'ref_aa_short'}$vcf_data{$key}{'aa_pos'}$vcf_data{$key}{'alt_aa_short'}\t$vcf_data{$key}{'snp_type'}\t$vcf_data{$key}{tang}\t$vcf_data{$key}{gd}\t$vcf_data{$key}{blossum45}\t$vcf_data{$key}{pam30}\t$vcf_data{$key}{AACI}"
+#             if $options{lvl} == 6 and $vcf_data{$key}{_type} eq "snp";
+#         if ( $options{indel} ) {
+#             $snp_per_gene_h{ $vcf_data{$key}{locus} }{$key}
+#                 = "$vcf_data{$key}{'snp_gene_pos'}$vcf_data{$key}{'short_indel_note'}$vcf_data{$key}{'indel'}\t$vcf_data{$key}{'full_formated_indel'}\t$vcf_data{$key}{'frame_shift'}\t$vcf_data{$key}{'snp_type'}"
+#                 if $options{lvl} == 5 and $vcf_data{$key}{_type} eq "indel";
+#             $snp_per_gene_h{ $vcf_data{$key}{locus} }{$key}
+#                 = "$vcf_data{$key}{'snp_gene_pos'}$vcf_data{$key}{'short_indel_note'}$vcf_data{$key}{'indel'}\t$vcf_data{$key}{'full_formated_indel'}\t$vcf_data{$key}{'frame_shift'}\t$vcf_data{$key}{'snp_type'}\t$vcf_data{$key}{tang}\t$vcf_data{$key}{gd}\t$vcf_data{$key}{blossum45}\t$vcf_data{$key}{pam30}\t$vcf_data{$key}{AACI}"
+#                 if $options{lvl} == 6 and $vcf_data{$key}{_type} eq "indel";
+
+#         }
+
+#         #------------------------------------------------------------
+#     }
+#     if ( $options{lvl} == 5 or $options{lvl} == 6 ) {
+#         foreach my $key ( sort keys %snp_per_gene_h ) {
+
+#             my $key2_count = 0;
+#             foreach my $key2 ( sort keys %{ $snp_per_gene_h{$key} } ) {
+#                 $key2_count++;
+#                 if ( $key2_count == 1 ) {
+#                     print "$key" . "\t"
+#                         . $database{$key}{'product'} . "\t"
+#                         . "\n\t$key2\t$snp_per_gene_h{$key}{$key2}\n";
+
+#                 }
+#                 else {
+#                     print "\t$key2\t$snp_per_gene_h{$key}{$key2}\n";
+#                 }
+#             }
+#         }
+#     }
+
+#     my $elapsed = tv_interval( $t0, [gettimeofday] );
+#     print "elapsed:\t$elapsed\n";
+
+# }
+
+# sub annotate_vcf {
+#     my $locInputFile   = shift;
+#     my $AACI          = "";
+#     my $loc_AACI_flag = "----";
+#     my $loc_AACI      = 0;
+#     my $locRefGenomeName  = "";
+#     my $DP            = "";
+#     my $count         = 0;
+
+# # print
+# # "locus\tsnp_pos\tgene_pos\tcodons\taa_pos\ttype\tu_index\tGD\tscore\tDP\tproduct\n";
+#     open( my $fh, "<", $locInputFile )
+#         or croak "cannot open < $locInputFile: $!";
+
+#     while (<$fh>) {
+#         my $str = "$_";
+#         next if $str =~ /^#/;
+#         $str =~ /.*($RefGenomeName)/x;
+#         $locRefGenomeName = $1;
+#         $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
+#         if ( length($2) == 1 && length($3) == 1 ) {
+#             my %LocusInfoReader = &get_locus_info( $1, $3 );
+#             if ( $locRefGenomeName ne $RefGenomeName ) {
+#                 print
+#                     "REFERENCE GENOME: $RefGenomeName NOT FOUND! ($locRefGenomeName)\n";
+#                 exit;
+#             }
+
+#  # print "$LocusInfoReader{'alt_aa_long'}\t!!!!!\n" if $LocusInfoReader{'alt_aa_long'} eq "BAD_CODON";
+#             if ($LocusInfoReader{'locus'} ne ""
+
+#                 # && $LocusInfoReader{'alt_aa_long'} ne 'STOP'
+#                 # && $LocusInfoReader{'ref_aa_long'} ne 'STOP'
+#                 && $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+#                 && $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON'
+#                 )
+#             {
+#                 $DP = $4;
+#                 if ( $LocusInfoReader{'snp_type'} eq "missense" ) {
+#                     my $loc_tang_index
+#                         = calcutalte_tang_index( $LocusInfoReader{'ref_aa_long'},
+#                         $LocusInfoReader{'alt_aa_long'} );
+
+#                     # my $loc_deltaH
+#                     #     = calcutalte_deltaH( $LocusInfoReader{'ref_aa_long'},
+#                     #     $LocusInfoReader{'alt_aa_long'} );
+#                     my $loc_GD
+#                         = calculate_grantham_matrix( $LocusInfoReader{'ref_aa_long'},
+#                         $LocusInfoReader{'alt_aa_long'} );
+#                     my $blosum
+#                         = calculate_blosum45_matrix( $LocusInfoReader{'ref_aa_long'},
+#                         $LocusInfoReader{'alt_aa_long'} );
+#                     my $pam
+#                         = &calculate_pam30_matrix( $LocusInfoReader{'ref_aa_long'},
+#                         $LocusInfoReader{'alt_aa_long'} );
+
+#                     # my $titv=&calcutalte_tv_ti($LocusInfoReader{'ref'},
+#                     #     $LocusInfoReader{'alt'} );
+#                     #  $titv="-" if $titv eq "";
+#                     if ( $loc_tang_index < 0.5 ) {
+#                         $loc_AACI++;
+#                         substr $loc_AACI_flag, 0, 1, "+";
+#                     }
+
+#                     # if ( $loc_deltaH > 1.22 ) {
+#                     #     $loc_AACI++;
+#                     #     substr $loc_AACI_flag, 1, 1, "+";
+#                     # }
+#                     if ( $loc_GD > 100 ) {
+#                         $loc_AACI++;
+#                         substr $loc_AACI_flag, 1, 1, "+";
+#                     }
+#                     if ( $blosum < 0 ) {
+#                         $loc_AACI++;
+#                         substr $loc_AACI_flag, 2, 1, "+";
+#                     }
+#                     if ( $pam < 0 ) {
+#                         $loc_AACI++;
+#                         substr $loc_AACI_flag, 3, 1, "+";
+#                     }
+
+#                     $AACI
+#                         = "$loc_tang_index\t$loc_GD\t$blosum\t$pam\t$loc_AACI_flag\t";
+#                 }
+
+#                 else {
+#                     $AACI = "-\t-\t-\t-\t$loc_AACI_flag\t";
+#                 }
+#                 if ( $options{action} eq "annotation.1" ) {
+
+#                     # if ( $loc_AACI_flag eq "+++" ) {
+#                     print
+#                         "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$AACI$LocusInfoReader{'product'}\n";
+
+#                     # }
+#                 }
+
+#        # elsif ( $options{action} eq "annotation.2" ) {
+#        #     print
+#        #         "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t\t$LocusInfoReader{'product'}\n";
+#        # }
+#                 elsif ( $options{action} eq "annotation" ) {
+
+#                     # print  color 'bold green';
+#                     # if ( $loc_AACI_flag ne "---" ) {
+
+#                     print
+#                         "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{'product'}\n";
+
+#                     # }
+#                 }
+#                 elsif ( $options{action} eq "annotation.11" ) {
+#                     print
+#                         "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$AACI$LocusInfoReader{'product'}\n"
+#                         if $loc_AACI_flag ne "----";
+#                 }
+#                 elsif ( $options{action} eq "annotation.12" ) {
+#                     print
+#                         "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$AACI$LocusInfoReader{'product'}\n"
+#                         if $loc_AACI_flag eq "++++";
+#                 }
+
+#                 $loc_AACI      = 0;
+#                 $loc_AACI_flag = "----";
+
+#             }
+
+#         }
+#         elsif ( length($3) > length($2) and $options{indel} ) {
+#             my %LocusInfoReader = &get_indel_info( $1, $2, $3 );
+#             next if $LocusInfoReader{locus} eq "";
+#             print $LocusInfoReader{locus} . "\t"
+#                 . $LocusInfoReader{snp_genome_pos} . "\t"
+#                 . $LocusInfoReader{snp_gene_pos} . "ins"
+#                 . $LocusInfoReader{indel} . "\t"
+#                 . $LocusInfoReader{ref} . "/"
+#                 . $LocusInfoReader{formated_indel} . "\t"
+#                 . $LocusInfoReader{frame_shift} . "\t"
+#                 . $LocusInfoReader{snp_type}
+#                 . "\t-\t-\t-\t-\t"
+#                 . $LocusInfoReader{product} . "\n";
+
+#   # print $LocusInfoReader{full_formated_indel} .  "\t-\t-\t-\t-\t" . $LocusInfoReader{product} ."\n";
+
+# # my $alt=$3;
+# # my $snp_pos=$1;
+# # my $ref=$2;
+# # my %LocusInfoReader = &get_locus_info($snp_pos);
+# # next if $LocusInfoReader{locus} eq "";
+# # $alt=~/^($ref)(.*)/;
+# # my $ref_pos=$LocusInfoReader{snp_gene_pos}+length($ref);
+# # my $alt_pos=$ref_pos+length($2);
+# # print $LocusInfoReader{locus}."\t$snp_pos\t$ref_pos\_$alt_pos" . "ins$2\tref:$ref\talt:$alt\tb:$1\ta:$2\n";
+# # # exit;
+# # # my %LocusInfoReader = &get_locus_info( $1,$3);
+# # # print
+# # #             "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t\t\t\t\t\tinsertion\t\t\n";
+#         }
+#         elsif ( length($3) < length($2) and $options{indel} ) {
+#             my %LocusInfoReader = &get_indel_info( $1, $2, $3 );
+#             next if $LocusInfoReader{locus} eq "";
+#             print $LocusInfoReader{locus} . "\t"
+#                 . $LocusInfoReader{snp_genome_pos} . "\t"
+#                 . $LocusInfoReader{snp_gene_pos} . "del"
+#                 . $LocusInfoReader{indel} . "\t"
+#                 . $LocusInfoReader{formated_indel} . "/"
+#                 . $LocusInfoReader{ref} . "\t"
+#                 . $LocusInfoReader{frame_shift} . "\t"
+#                 . $LocusInfoReader{snp_type}
+#                 . "\t-\t-\t-\t-\t"
+#                 . $LocusInfoReader{product} . "\n";
+
+#         }
+
+#     }
+#     close $fh;
+
+# }
+
+=======
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
 sub get_intergen_info {
 
-    # my $loc_snp_pos    = shift;
+    # my $locSnpPosInGenome    = shift;
     # my $loc_alt        = shift;
-    my ( $loc_snp_pos, $loc_alt, $enable_calcs )
+    my ( $locSnpPosInGenome, $loc_alt, $enable_calcs )
         = @_;    #gets values of abs. snp pos,
-    my $loc_locus_name = "";
-    my %locus_info_h;
-    my $snp_gene_pos;
-    my $snp_type    = "";
+    my $locGeneLocusName = "";
+    my %LocusInfoProvider;
+    my $snpPosInGene;
+    my $typeOfSNP    = "";
     my $gene_length = 0;
     my ( $tang, $gd, $blossum45, $pam30 );
     my $loc_AACI_flag = "----";
@@ -369,48 +659,48 @@ sub get_intergen_info {
     foreach my $key ( sort keys %intergenic )
     {            #looking for positions of intergenic snps
 
-        if (   $loc_snp_pos > scalar $intergenic{$key}{'start'}
-            && $loc_snp_pos < scalar $intergenic{$key}{'end'} )
+        if (  $locSnpPosInGenome > scalar $intergenic{$key}{'start'}
+            && $locSnpPosInGenome < scalar $intergenic{$key}{'end'} )
         {
-            $loc_locus_name = $key;
+            $locGeneLocusName = $key;
             last;
 
         }
 
     }
 
-    if ( $loc_locus_name ne "" ) {
-        my $loc_start = $intergenic{$loc_locus_name}{"start"};
-        my $loc_end   = $intergenic{$loc_locus_name}{"end"};
+    if ( $locGeneLocusName ne "" ) {
+        my $locStartOfGene = $intergenic{$locGeneLocusName}{"start"};
+        my $locEndOfGene   = $intergenic{$locGeneLocusName}{"end"};
 
-      #     my $loc_strand       = $database{$loc_locus_name}{"strand"};
-      #     my $loc_transl_table = $database{$loc_locus_name}{"transl_table"};
-      #     my $loc_product      = $database{$loc_locus_name}{"product"};
-      #     my $loc_note         = $database{$loc_locus_name}{"note"};
-        my $loc_nuc_seq = $intergenic{$loc_locus_name}{"sequence"};
-        my $igen_genes  = $intergenic{$loc_locus_name}{"igen_genes"};
+      #     my $locStrandDirection       = $database{$locGeneLocusName}{"strand"};
+      #     my $locTranslationTable = $database{$locGeneLocusName}{"transl_table"};
+      #     my $loc_product      = $database{$locGeneLocusName}{"product"};
+      #     my $loc_note         = $database{$locGeneLocusName}{"note"};
+        my $loc_nuc_seq = $intergenic{$locGeneLocusName}{"sequence"};
+        my $igen_genes  = $intergenic{$locGeneLocusName}{"igen_genes"};
 
-        #     if ( $loc_strand == 1 ) {Rv1132
-        $snp_gene_pos = ( ( $loc_snp_pos - $loc_start ) + 1 );
+        #     if ( $locStrandDirection == 1 ) {Rv1132
+        $snpPosInGene = ( ( $locSnpPosInGenome - $locStartOfGene ) + 1 );
 
         #     }
-        #     elsif ( $loc_strand == -1 ) {
-        #         $snp_gene_pos = ( ( $loc_end - $loc_snp_pos ) + 1 );
+        #     elsif ( $locStrandDirection == -1 ) {
+        #         $snpPosInGene = ( ( $locEndOfGene - $locSnpPosInGenome ) + 1 );
         #         $loc_alt =~ tr/ACGT/TGCA/;
         #     }
-        #     if ( $loc_end > $loc_start ) {
-        $gene_length = ( $loc_end - $loc_start ) + 1;
+        #     if ( $locEndOfGene > $locStartOfGene ) {
+        $gene_length = ( $locEndOfGene - $locStartOfGene ) + 1;
 
         #     }
-        #     elsif ( $loc_start > $loc_end ) {
-        #         $gene_length = ( $loc_start - $loc_end ) + 1;
+        #     elsif ( $locStartOfGene > $locEndOfGene ) {
+        #         $gene_length = ( $locStartOfGene - $locEndOfGene ) + 1;
         #     }
         my $loc_ref
-            = substr( $loc_nuc_seq, $snp_gene_pos - 1, 1 );    #ref letter
-        my $codon_nbr = int( ( $snp_gene_pos - 1 ) / 3 ) + 1;  #codon position
+            = substr( $loc_nuc_seq, $snpPosInGene - 1, 1 );    #ref letter
+        my $codon_nbr = int( ( $snpPosInGene - 1 ) / 3 ) + 1;  #codon position
         my @codons = unpack( "(A3)*", $loc_nuc_seq );          # nbr of codons
         my $res_codon = lc( $codons[ $codon_nbr - 1 ] );
-        my $loc_codon_pos = ( ( $codon_nbr * 3 ) - $snp_gene_pos );
+        my $loc_codon_pos = ( ( $codon_nbr * 3 ) - $snpPosInGene );
         if ( $loc_codon_pos == 2 ) {
             $loc_codon_pos = 0;
         }
@@ -424,26 +714,83 @@ sub get_intergen_info {
         my $alt_res_codon = $res_codon;
         substr $alt_res_codon, $loc_codon_pos, 1, $loc_alt;
 
+<<<<<<< HEAD
+        # my $ref_aa = codon2aa($res_codon);
+        # my $alt_aa = codon2aa($alt_res_codon);
+        # if ( $ref_aa eq $alt_aa and $alt_aa ne "X" ) {
+        #     $typeOfSNP = "synonymous";
+        # }
+        # elsif ( $ref_aa ne $alt_aa and $alt_aa ne "X" ) {
+        #     $typeOfSNP = "missense";
+        # }
+        # elsif ( $ref_aa ne $alt_aa and $alt_aa eq "X" ) {
+        #     $typeOfSNP = "nonsense";
+
+        # }
+
+        #     if ( $enable_calcs eq 1 and $typeOfSNP eq "missense" ) {
+        #         $tang = calcutalte_tang_index( $ref_aa, $alt_aa );
+        #         $gd = calculate_grantham_matrix( $ref_aa, $alt_aa );
+        #         $blossum45 = calculate_blosum45_matrix( $ref_aa, $alt_aa );
+        #         $pam30 = calculate_pam30_matrix( $ref_aa, $alt_aa );
+        #         if ( $tang < TANG_TH ) {
+
+        #             substr $loc_AACI_flag, 0, 1, "+";
+        #         }
+
+        #         if ( $gd > GD_TH ) {
+
+        #             substr $loc_AACI_flag, 1, 1, "+";
+        #         }
+        #         if ( $blossum45 < BLOSSUM45_TH ) {
+
+        #             substr $loc_AACI_flag, 2, 1, "+";
+        #         }
+        #         if ( $pam30 < PAM30_TH ) {
+
+        #             substr $loc_AACI_flag, 3, 1, "+";
+        #         }
+
+        #     }
+        #     elsif ( $enable_calcs eq 1 and $typeOfSNP eq "synonymous" ) {
+        #         $tang          = "-";
+        #         $gd            = "-";
+        #         $blossum45     = "-";
+        #         $pam30         = "-";
+        #         $loc_AACI_flag = "----";
+        #     }
+        #     elsif ( $enable_calcs eq 1 and $typeOfSNP eq "nonsense" ) {
+        #         $tang          = "-";
+        #         $gd            = "-";
+        #         $blossum45     = "-";
+        #         $pam30         = "-";
+        #         $loc_AACI_flag = "----";
+        #     }
+
+        %LocusInfoProvider = (
+            "locus" => $locGeneLocusName,
+=======
         %locus_info_h = (
             "locus" => $loc_locus_name,
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
 
-            "snp_genome_pos" => $loc_snp_pos,
-            "start"          => $loc_start,
-            "end"            => $loc_end,
+            "snp_genome_pos" => $locSnpPosInGenome,
+            "start"          => $locStartOfGene,
+            "end"            => $locEndOfGene,
 
-            # "strand"         => $loc_strand,
+            # "strand"         => $locStrandDirection,
             # "product"        => $loc_product,
             "sequence" => $loc_nuc_seq,
 
-            # "snp_gene_pos"   => $snp_gene_pos,
+            # "snp_gene_pos"   => $snpPosInGene,
             "alt" => $loc_alt,
-            "snp" => "$loc_snp_pos$loc_ref>$loc_alt",
+            "snp" => "$locSnpPosInGenome$loc_ref>$loc_alt",
             "ref" => $loc_ref,
 
             # "aa_pos"    => $codon_nbr,
             "ref_codon" => $res_codon,
 
-            # "snp_type"       => $snp_type,
+            # "snp_type"       => $typeOfSNP,
             # "ref_aa_long"    => $ref_aa,
             # "alt_aa_long"    => $alt_aa,
             # "ref_aa_short"   => &aa_decode($ref_aa),
@@ -461,7 +808,7 @@ sub get_intergen_info {
                 # "pam30"          => $pam30,
                 # "AACI"           => $loc_AACI_flag,
         );
-        return %locus_info_h;
+        return %LocusInfoProvider;
 
         # $loc_AACI_flag = "----";
 
@@ -474,30 +821,37 @@ sub get_intergen_info {
 }
 
 sub open_single_vcf {
-    my ( $loc_file_in, $enable_calcs ) = @_;
-    my $loc_ref_name = "";
+    my ( $locInputFile, $enable_calcs ) = @_;
+    my $locRefGenomeName = "";
     my %results;
-    my $loc_type = "";
+    # my $loc_type = "";
     my %locus_info;
     my $loc_AACI_flag = "----";
     my %file_hash;
-    my $query = qr/^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/;
+    my $vcfParserQuery = qr/^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/;
     my $t0    = [gettimeofday];
-    open( my $fh, "<", $loc_file_in )
-        or croak "cannot open < $loc_file_in: $!";
-
+    open( my $fh, "<", $locInputFile )
+        or croak "cannot open < $locInputFile: $!";
+        #**** HEADERS DISABLED
+    # if ($options{lvl} == 1 && $options{debug}) {
+    # print "locus\tpos.\tsnp\tcodon\tAA\ttype\t\tdesc.\n";
+    # }
+    # elsif ($options{lvl} == 2 || $options{lvl} == 3 || $options{lvl} == 4) {
+    #   print "locus\tpos.\tsnp\tcodon\tAA\ttype\ttang\tGD\tblossumm45\tpam30\tscore\tdesc.\n" if $options{debug};
+    # }
     while (<$fh>) {
         my $str = "$_";
         next if $str =~ /^#/;
-        $str =~ /.*($ref_genome_name)/x;
-        $loc_ref_name = $1;
-        if ( $loc_ref_name ne $ref_genome_name ) {
-            print "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+        $str =~ /.*($RefGenomeName)/x;
+        $locRefGenomeName = $1;
+        if ( $locRefGenomeName ne $RefGenomeName ) {
+            print "REFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
             exit;
         }
 
-        $str =~ $query;
+        $str =~$vcfParserQuery;
         if ( length($2) == 1 and length($3) == 1 ) {
+
             &print_locus_info( $1, $3 );
         }
         elsif ( length($2) != 1 and length($3) != 1 and $options{indel} ) {
@@ -519,13 +873,13 @@ sub open_single_vcf {
 
 sub print_locus_info {
 
-    # my $loc_snp_pos    = shift;
+    # my $locSnpPosInGenome    = shift;
     # my $loc_alt        = shift;
-    my ( $loc_snp_pos, $loc_alt ) = @_;
-    my $loc_locus_name = "";
-    my %locus_info_h;
-    my $snp_gene_pos;
-    my $snp_type    = "";
+    my ( $locSnpPosInGenome, $loc_alt ) = @_;
+    my $locGeneLocusName = "";
+    my %LocusInfoProvider;
+    my $snpPosInGene;
+    my $typeOfSNP    = "";
     my $gene_length = 0;
     my ( $tang, $gd, $blossum45, $pam30 );
     my $loc_AACI_flag = "----";
@@ -544,45 +898,45 @@ sub print_locus_info {
     }
 
     foreach my $key ( keys %database ) {
-        if (   $loc_snp_pos >= scalar $database{$key}{'start'}
-            && $loc_snp_pos <= scalar $database{$key}{'end'} )
+        if (   $locSnpPosInGenome >= scalar $database{$key}{'start'}
+            && $locSnpPosInGenome <= scalar $database{$key}{'end'} )
         {
-            $loc_locus_name = $key;
+            $locGeneLocusName = $key;
             last;
         }
 
     }
 
-    if ( $loc_locus_name ne "" ) {
-        my $loc_start        = $database{$loc_locus_name}{"start"};
-        my $loc_end          = $database{$loc_locus_name}{"end"};
-        my $loc_strand       = $database{$loc_locus_name}{"strand"};
-        my $loc_transl_table = $database{$loc_locus_name}{"transl_table"};
-        my $loc_product      = $database{$loc_locus_name}{"product"};
-        my $loc_note         = $database{$loc_locus_name}{"note"};
-        my $loc_nuc_seq      = $database{$loc_locus_name}{"sequence"};
+    if ( $locGeneLocusName ne "" ) {
+        my $locStartOfGene        = $database{$locGeneLocusName}{"start"};
+        my $locEndOfGene          = $database{$locGeneLocusName}{"end"};
+        my $locStrandDirection       = $database{$locGeneLocusName}{"strand"};
+        my $locTranslationTable = $database{$locGeneLocusName}{"transl_table"};
+        my $loc_product      = $database{$locGeneLocusName}{"product"};
+        my $loc_note         = $database{$locGeneLocusName}{"note"};
+        my $loc_nuc_seq      = $database{$locGeneLocusName}{"sequence"};
 
-        if ( $loc_strand == 1 ) {
-            $snp_gene_pos = ( ( $loc_snp_pos - $loc_start ) + 1 );
+        if ( $locStrandDirection == 1 ) {
+            $snpPosInGene = ( ( $locSnpPosInGenome - $locStartOfGene ) + 1 );
         }
-        elsif ( $loc_strand == -1 ) {
-            $snp_gene_pos = ( ( $loc_end - $loc_snp_pos ) + 1 );
+        elsif ( $locStrandDirection == -1 ) {
+            $snpPosInGene = ( ( $locEndOfGene - $locSnpPosInGenome ) + 1 );
             $loc_alt =~ tr/ACGT/TGCA/;
         }
-        if ( $loc_end > $loc_start ) {
-            $gene_length = ( $loc_end - $loc_start ) + 1;
+        if ( $locEndOfGene > $locStartOfGene ) {
+            $gene_length = ( $locEndOfGene - $locStartOfGene ) + 1;
         }
-        elsif ( $loc_start > $loc_end ) {
-            $gene_length = ( $loc_start - $loc_end ) + 1;
+        elsif ( $locStartOfGene > $locEndOfGene ) {
+            $gene_length = ( $locStartOfGene - $locEndOfGene ) + 1;
         }
-        my $loc_ref = substr( $loc_nuc_seq, $snp_gene_pos - 1, 1 )
+        my $loc_ref = substr( $loc_nuc_seq, $snpPosInGene - 1, 1 )
             ;    #reference target letter
-        my $codon_nbr = int( ( $snp_gene_pos - 1 ) / 3 )
+        my $codon_nbr = int( ( $snpPosInGene - 1 ) / 3 )
             + 1;    #number of target codon from start
         my @codons = unpack( "(A3)*", $loc_nuc_seq );     # codons of gene
         my $res_codon = lc( $codons[ $codon_nbr - 1 ] )
             ;    # letters from target codon in low case
-        my $loc_codon_pos = ( ( $codon_nbr * 3 ) - $snp_gene_pos )
+        my $loc_codon_pos = ( ( $codon_nbr * 3 ) - $snpPosInGene )
             ;    # position letter in codon (0,1,2)
          # print "$loc_ref\n$codon_nbr\n$res_codon\n$loc_codon_pos\n" . scalar(@codons) . "\n";
          # exit;
@@ -605,25 +959,25 @@ sub print_locus_info {
             and $alt_aa ne "BAD_CODON"
             and $ref_aa ne "BAD_CODON" )
         {
-            $snp_type = "synonymous";
+            $typeOfSNP = "synonymous";
         }
         elsif ( $ref_aa ne $alt_aa
             and $alt_aa ne "X"
             and $alt_aa ne "BAD_CODON"
             and $ref_aa ne "BAD_CODON" )
         {
-            $snp_type = "missense";
+            $typeOfSNP = "missense";
         }
         elsif ( $ref_aa ne $alt_aa
             and $alt_aa eq "X"
             and $alt_aa ne "BAD_CODON"
             and $ref_aa ne "BAD_CODON" )
         {
-            $snp_type = "nonsense";
+            $typeOfSNP = "nonsense";
 
         }
 
-        if ( $enable_calcs eq 1 and $snp_type eq "missense" ) {
+        if ( $enable_calcs eq 1 and $typeOfSNP eq "missense" ) {
             $tang = calcutalte_tang_index( $ref_aa, $alt_aa );
             $gd = calculate_grantham_matrix( $ref_aa, $alt_aa );
             $blossum45 = calculate_blosum45_matrix( $ref_aa, $alt_aa );
@@ -647,14 +1001,14 @@ sub print_locus_info {
             }
 
         }
-        elsif ( $enable_calcs eq 1 and $snp_type eq "synonymous" ) {
+        elsif ( $enable_calcs eq 1 and $typeOfSNP eq "synonymous" ) {
             $tang          = "-";
             $gd            = "-";
             $blossum45     = "-";
             $pam30         = "-";
             $loc_AACI_flag = "----";
         }
-        elsif ( $enable_calcs eq 1 and $snp_type eq "nonsense" ) {
+        elsif ( $enable_calcs eq 1 and $typeOfSNP eq "nonsense" ) {
             $tang          = "-";
             $gd            = "-";
             $blossum45     = "-";
@@ -662,51 +1016,108 @@ sub print_locus_info {
             $loc_AACI_flag = "----";
         }
 
-        $snp          = "$snp_gene_pos$loc_ref>$loc_alt";
+        $snp          = "$snpPosInGene$loc_ref>$loc_alt";
         $ref_aa_short = &aa_decode($ref_aa);
         $alt_aa_short = &aa_decode($alt_aa);
 
         # if ($options{lvl} ==7){
         # my $sub_seq = $loc_nuc_seq;
-        # substr( $sub_seq, $snp_gene_pos - 1, 1 ) = "[$loc_ref>$loc_alt]";
-        # my $sub_res=substr($sub_seq, $snp_gene_pos - 6,16);
+        # substr( $sub_seq, $snpPosInGene - 1, 1 ) = "[$loc_ref>$loc_alt]";
+        # my $sub_res=substr($sub_seq, $snpPosInGene - 6,16);
         # }
 
         print
-            "$loc_locus_name\t$loc_snp_pos\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$snp_type\t$loc_product\n"
+            "$locGeneLocusName\t$locSnpPosInGenome\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$typeOfSNP\t$loc_product\n"
             if $options{lvl} == 1;
 
         print
-            "$loc_locus_name\t$loc_snp_pos\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$snp_type\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n"
+            "$locGeneLocusName\t$locSnpPosInGenome\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$typeOfSNP\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n"
             if $options{lvl} == 2;
         print
-            "$loc_locus_name\t$loc_snp_pos\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$snp_type\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n"
+            "$locGeneLocusName\t$locSnpPosInGenome\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$typeOfSNP\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n"
             if $options{lvl} == 3
-            and $snp_type eq "missense";
+            and $typeOfSNP eq "missense";
 
         # and $loc_AACI_flag ne "----";
 
         print
-            "$loc_locus_name\t$loc_snp_pos\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$snp_type\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n"
+            "$locGeneLocusName\t$locSnpPosInGenome\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$typeOfSNP\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n"
             if $options{lvl} == 4
             and $loc_AACI_flag eq "++++";
 
-        $snp_per_gene_h{$loc_locus_name}{$loc_snp_pos}
-            = "\t$snp$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$snp_type"
+        $snp_per_gene_h{$locGeneLocusName}{$locSnpPosInGenome}
+            = "\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$typeOfSNP"
             if $options{lvl} == 5;
 
-        $snp_per_gene_h{$loc_locus_name}{$loc_snp_pos}
-            = "\t$snp$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$snp_type\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag"
+        $snp_per_gene_h{$locGeneLocusName}{$locSnpPosInGenome}
+            = "\t$snp\t$res_codon/$alt_res_codon\t$ref_aa_short$codon_nbr$alt_aa_short\t$typeOfSNP\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag"
             if $options{lvl} == 6;
 
+<<<<<<< HEAD
+        # if ( $options{lvl} == 5 or $options{lvl} == 6 ) {
+
+        #     foreach my $key ( sort keys %snp_per_gene_h ) {
+
+        #         my $key2_count = 0;
+
+        #         foreach my $key2 ( sort keys %{ $snp_per_gene_h{$key} } ) {
+        #             $key2_count++;
+        #             if ( $key2_count == 1 ) {
+        #                 print "$key" . "\t"
+        #                     . $database{$key}{'product'} . "\t"
+        #                     . "\n\t$key2$snp_per_gene_h{$key}{$key2}\n";
+
+        #             }
+        #             else {
+        #                 print "\t$key2$snp_per_gene_h{$key}{$key2}\n";
+        #             }
+        #         }
+
+        #     }
+        # }
+
+        # %LocusInfoProvider = (
+        #     "locus"          => $locGeneLocusName,
+        #     "snp_genome_pos" => $locSnpPosInGenome,
+        #     "start"          => $locStartOfGene,
+        #     "end"            => $locEndOfGene,
+        #     "strand"         => $locStrandDirection,
+        #     "product"        => $loc_product,
+        #     "sequence"       => $loc_nuc_seq,
+        #     "snp_gene_pos"   => $snpPosInGene,
+        #     "alt"            => $loc_alt,
+        #     "snp"            => "$snpPosInGene$loc_ref>$loc_alt",
+        #     "ref"            => $loc_ref,
+        #     "aa_pos"         => $codon_nbr,
+        #     "ref_codon"      => $res_codon,
+        #     "snp_type"       => $typeOfSNP,
+        #     "ref_aa_long"    => $ref_aa,
+        #     "alt_aa_long"    => $alt_aa,
+        #     "ref_aa_short"   => &aa_decode($ref_aa),
+        #     "alt_aa_short"   => &aa_decode($alt_aa),
+        #     "alt_codon"      => $alt_res_codon,
+        #     "product"        => $loc_product,
+        #     "note"           => $loc_note,
+        #     "gene_length"    => $gene_length,
+        #     "protein_length" => scalar(@codons) - 1,
+        #     "tang"    => $tang,
+        #     "gd"    => $gd,
+        #     "blossum45"    => $blossum45,
+        #     "pam30"    => $pam30,
+        #     "AACI"    => $loc_AACI_flag,
+
+        # );
+        # return %LocusInfoProvider;
+=======
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
         $loc_AACI_flag = "----";
 
     }
-    elsif ( $loc_locus_name eq "" and $options{intergenic} ) {
-        my %tmp = &get_intergen_info( $loc_snp_pos, $loc_alt );
-        if ( $tmp{locus} ne "" ) {
+    elsif ( $locGeneLocusName eq "" and $options{intergenic} ) {
+        my %LocusInfoReader = &get_intergen_info( $locSnpPosInGenome, $loc_alt );
+        if ( $LocusInfoReader{locus} ne "" ) {
             print
-                "$tmp{igen_genes}\t$loc_snp_pos\t$tmp{snp}\t$tmp{ref_codon}\/$tmp{alt_codon}\t-\t-\t$tmp{product} ($tmp{igen_genes})\n";
+                "$LocusInfoReader{igen_genes}\t$locSnpPosInGenome\t$LocusInfoReader{snp}\t$LocusInfoReader{ref_codon}\/$LocusInfoReader{alt_codon}\t-\t-\t$LocusInfoReader{product} ($LocusInfoReader{igen_genes})\n";
 
         }
     }
@@ -746,14 +1157,14 @@ sub print_grouped_info {
 
 sub print_indel_info {
 
-    # my $loc_snp_pos    = shift;
+    # my $locSnpPosInGenome    = shift;
     # my $loc_alt        = shift;
-    my ( $loc_snp_pos, $ref, $alt ) = @_;
-    my $loc_locus_name = "";
+    my ( $locSnpPosInGenome, $ref, $alt ) = @_;
+    my $locGeneLocusName = "";
 
     # my %snp_per_gene_h;
-    my $snp_gene_pos;
-    my $snp_type            = "";
+    my $snpPosInGene;
+    my $typeOfSNP            = "";
     my $gene_length         = 0;
     my $indel               = "";
     my $indel_bp_count      = 0;
@@ -766,46 +1177,64 @@ sub print_indel_info {
 
     # my $common="";
     foreach my $key ( keys %database ) {
-        if (   $loc_snp_pos >= scalar $database{$key}{'start'}
-            && $loc_snp_pos <= scalar $database{$key}{'end'} )
+        if (   $locSnpPosInGenome >= scalar $database{$key}{'start'}
+            && $locSnpPosInGenome <= scalar $database{$key}{'end'} )
         {
-            $loc_locus_name = $key;
+            $locGeneLocusName = $key;
             last;
         }
 
     }
 
-    if ( $loc_locus_name ne "" ) {
-        my $loc_start        = $database{$loc_locus_name}{"start"};
-        my $loc_end          = $database{$loc_locus_name}{"end"};
-        my $loc_strand       = $database{$loc_locus_name}{"strand"};
-        my $loc_transl_table = $database{$loc_locus_name}{"transl_table"};
-        my $loc_product      = $database{$loc_locus_name}{"product"};
-        my $loc_note         = $database{$loc_locus_name}{"note"};
-        my $loc_nuc_seq      = $database{$loc_locus_name}{"sequence"};
+    if ( $locGeneLocusName ne "" ) {
+        my $locStartOfGene        = $database{$locGeneLocusName}{"start"};
+        my $locEndOfGene          = $database{$locGeneLocusName}{"end"};
+        my $locStrandDirection       = $database{$locGeneLocusName}{"strand"};
+        my $locTranslationTable = $database{$locGeneLocusName}{"transl_table"};
+        my $loc_product      = $database{$locGeneLocusName}{"product"};
+        my $loc_note         = $database{$locGeneLocusName}{"note"};
+        my $loc_nuc_seq      = $database{$locGeneLocusName}{"sequence"};
 
-        if ( $loc_strand == 1 ) {
-            $snp_gene_pos = ( ( $loc_snp_pos - $loc_start ) + 1 );
+        if ( $locStrandDirection == 1 ) {
+            $snpPosInGene = ( ( $locSnpPosInGenome - $locStartOfGene ) + 1 );
         }
-        elsif ( $loc_strand == -1 ) {
-            $snp_gene_pos = ( ( $loc_end - $loc_snp_pos ) + 1 );
+        elsif ( $locStrandDirection == -1 ) {
+            $snpPosInGene = ( ( $locEndOfGene - $locSnpPosInGenome ) + 1 );
 
             $alt =~ tr/ACGT/TGCA/;
             $ref =~ tr/ACGT/TGCA/;
 
         }
-        if ( $loc_end > $loc_start ) {
-            $gene_length = ( $loc_end - $loc_start ) + 1;
+        if ( $locEndOfGene > $locStartOfGene ) {
+            $gene_length = ( $locEndOfGene - $locStartOfGene ) + 1;
         }
-        elsif ( $loc_start > $loc_end ) {
-            $gene_length = ( $loc_start - $loc_end ) + 1;
+        elsif ( $locStartOfGene > $locEndOfGene ) {
+            $gene_length = ( $locStartOfGene - $locEndOfGene ) + 1;
         }
 
         if ( length($alt) > length($ref) ) {
-            $snp_type = "insertion";
+            $typeOfSNP = "insertion";
 
+<<<<<<< HEAD
+            # $alt =~ /^(?<left>$ref)\W+(?<right>.*)/;
+            # $alt =~ /^\S+\W+\d+\W+(?<left>\w+)\W+(?<right>\w+)/;
+            # ^\S+\W+\d+\W+(\w+)\W+(\w+)
+
+            # $indel=uc($2);
+
+# if ($locSnpPosInGenome eq "2704884")
+# {
+# print $+{left} . "\t" . $+{right} . "\n";
+#     exit;
+# }
+# next  if $+{left} eq "" || $+{right} eq "";
+# print "$options{vcf}\t$locGeneLocusName\t$alt\tleft:$+{left}\tright:$+{right}\n" if  $+{left} eq "" || $+{right} eq "";
+
+            # $indel = uc( $+{right} );
+=======
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
             $indel = uc($alt);
-            if ( $loc_strand == -1 ) {
+            if ( $locStrandDirection == -1 ) {
                 $indel = reverse($indel);
                 $ref   = reverse($ref);
             }
@@ -826,14 +1255,14 @@ sub print_indel_info {
 
         }
         elsif ( length($alt) < length($ref) ) {
-            $snp_type = "deletion";
+            $typeOfSNP = "deletion";
 
             # $ref =~ /^(?<left>$alt)(?<right>.*)/;
 
-            # $loc_locus_name = "" if $+{left} eq "" || $+{right} eq "";
+            # $locGeneLocusName = "" if $+{left} eq "" || $+{right} eq "";
             # $indel = uc( $+{left} );
             $indel = $ref;
-            if ( $loc_strand == -1 ) {
+            if ( $locStrandDirection == -1 ) {
 
                 $ref =~ tr/ACGTacgt/TGCAtgca/;
                 $indel =~ tr/ACGTacgt/TGCAtgca/;
@@ -853,12 +1282,38 @@ sub print_indel_info {
 
         }
 
+<<<<<<< HEAD
+        # %LocusInfoProvider = (
+        #     "locus"            => $locGeneLocusName,
+        #     "snp_genome_pos"   => $locSnpPosInGenome,
+        #     "start"            => $locStartOfGene,
+        #     "end"              => $locEndOfGene,
+        #     "strand"           => $locStrandDirection,
+        #     "product"          => $loc_product,
+        #     "sequence"         => $loc_nuc_seq,
+        #     "snp_gene_pos"     => $snpPosInGene,
+        #     "snp_type"         => $typeOfSNP,
+        #     "note"             => $loc_note,
+        #     "gene_length"      => $gene_length,
+        #     "indel"            => $indel,
+        #     "ref"              => lc($ref),
+        #     "formated_indel"   => $formated_indel,
+        #     "frame_shift"      => $frame_shift,
+        #     "short_indel_note" => substr( $typeOfSNP, 0, 3 )
+
+        #         # "protein_length" => scalar(@codons) - 1,
+
+        # );
+
+        if ( $typeOfSNP eq "insertion" ) {
+=======
         if ( $snp_type eq "insertion" ) {
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
             $full_formated_indel
                 = lc($ref) . "/" . lc($ref) . uc($indel);
 
         }
-        elsif ( $snp_type eq "deletion" ) {
+        elsif ( $typeOfSNP eq "deletion" ) {
             $full_formated_indel
                 = lc($ref) . uc($indel) . "/" . lc($ref);
 
@@ -869,27 +1324,66 @@ sub print_indel_info {
         $blossum45     = "-";
         $pam30         = "-";
         $loc_AACI_flag = "----";
-        print "$loc_locus_name\t$loc_snp_pos\t$snp_gene_pos"
-            . substr( $snp_type, 0, 3 )
-            . "$indel\t$full_formated_indel\t$frame_shift\t$snp_type\t$loc_product\n"
+        print "$locGeneLocusName\t$locSnpPosInGenome\t$snpPosInGene"
+            . substr( $typeOfSNP, 0, 3 )
+            . "$indel\t$full_formated_indel\t$frame_shift\t$typeOfSNP\t$loc_product\n"
             if $options{lvl} == 1;
-        print "$loc_locus_name\t$loc_snp_pos\t$snp_gene_pos"
-            . substr( $snp_type, 0, 3 )
-            . "$indel\t$full_formated_indel\t$frame_shift\t$snp_type\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n"
+        print "$locGeneLocusName\t$locSnpPosInGenome\t$snpPosInGene"
+            . substr( $typeOfSNP, 0, 3 )
+            . "$indel\t$full_formated_indel\t$frame_shift\t$typeOfSNP\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n"
             if $options{lvl} == 2;
 
-        $snp_per_gene_h{$loc_locus_name}{$loc_snp_pos}
-            = "\t$snp_gene_pos"
-            . substr( $snp_type, 0, 3 )
-            . "$indel\t$frame_shift\t$snp_type"
+        $snp_per_gene_h{$locGeneLocusName}{$locSnpPosInGenome}
+            = "\t$snpPosInGene"
+            . substr( $typeOfSNP, 0, 3 )
+            . "$indel\t$frame_shift\t$typeOfSNP"
             if $options{lvl} == 5;
 
-        $snp_per_gene_h{$loc_locus_name}{$loc_snp_pos}
-            = "\t$snp_gene_pos"
-            . substr( $snp_type, 0, 3 )
-            . "$indel\t$full_formated_indel\t$frame_shift\t$snp_type\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag"
+        $snp_per_gene_h{$locGeneLocusName}{$locSnpPosInGenome}
+            = "\t$snpPosInGene"
+            . substr( $typeOfSNP, 0, 3 )
+            . "$indel\t$full_formated_indel\t$frame_shift\t$typeOfSNP\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag"
             if $options{lvl} == 6;
 
+<<<<<<< HEAD
+        # if ( $options{lvl} == 5 or $options{lvl} == 6 ) {
+        #     foreach my $key ( sort keys %snp_per_gene_h ) {
+
+        #         my $key2_count = 0;
+        #         foreach my $key2 ( sort keys %{ $snp_per_gene_h{$key} } ) {
+        #             $key2_count++;
+        #             if ( $key2_count == 1 ) {
+        #                 print "$key" . "\t"
+        #                     . $database{$key}{'product'} . "\t"
+        #                     . "\n\t$key2\t$snp_per_gene_h{$key}{$key2}\n";
+
+        #             }
+        #             else {
+        #                 print "\t$key2\t$snp_per_gene_h{$key}{$key2}\n";
+        #             }
+        #         }
+        #     }
+        # }
+
+        #     "locus"            => $locGeneLocusName,
+        #     "snp_genome_pos"   => $locSnpPosInGenome,
+        #     "start"            => $locStartOfGene,
+        #     "end"              => $locEndOfGene,
+        #     "strand"           => $locStrandDirection,
+        #     "product"          => $loc_product,
+        #     "sequence"         => $loc_nuc_seq,
+        #     "snp_gene_pos"     => $snpPosInGene,
+        #     "snp_type"         => $typeOfSNP,
+        #     "note"             => $loc_note,
+        #     "gene_length"      => $gene_length,
+        #     "indel"            => $indel,
+        #     "ref"              => lc($ref),
+        #     "formated_indel"   => $formated_indel,
+        #     "frame_shift"      => $frame_shift,
+        #     "short_indel_note" => substr( $typeOfSNP, 0, 3 )
+        # # return %LocusInfoProvider;
+=======
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
         $loc_AACI_flag = "----";
 
     }
@@ -901,13 +1395,13 @@ sub print_indel_info {
 
 sub get_indel_info {
 
-    # my $loc_snp_pos    = shift;
+    # my $locSnpPosInGenome    = shift;
     # my $loc_alt        = shift;
-    my ( $loc_snp_pos, $ref, $alt ) = @_;
-    my $loc_locus_name = "";
+    my ( $locSnpPosInGenome, $ref, $alt ) = @_;
+    my $locGeneLocusName = "";
     my %snp_per_gene_h;
-    my $snp_gene_pos;
-    my $snp_type            = "";
+    my $snpPosInGene;
+    my $typeOfSNP            = "";
     my $gene_length         = 0;
     my $indel               = "";
     my $indel_bp_count      = 0;
@@ -917,50 +1411,65 @@ sub get_indel_info {
     my $full_formated_indel = "";
     my $loc_AACI_flag       = "----";
     my ( $tang, $gd, $blossum45, $pam30 );
-    my %locus_info_h;
+    my %LocusInfoProvider;
 
     # my $common="";
     foreach my $key ( sort keys %database ) {
-        if (   $loc_snp_pos >= scalar $database{$key}{'start'}
-            && $loc_snp_pos <= scalar $database{$key}{'end'} )
+        if (   $locSnpPosInGenome >= scalar $database{$key}{'start'}
+            && $locSnpPosInGenome <= scalar $database{$key}{'end'} )
         {
-            $loc_locus_name = $key;
+            $locGeneLocusName = $key;
             last;
         }
 
     }
 
-    if ( $loc_locus_name ne "" ) {
-        my $loc_start        = $database{$loc_locus_name}{"start"};
-        my $loc_end          = $database{$loc_locus_name}{"end"};
-        my $loc_strand       = $database{$loc_locus_name}{"strand"};
-        my $loc_transl_table = $database{$loc_locus_name}{"transl_table"};
-        my $loc_product      = $database{$loc_locus_name}{"product"};
-        my $loc_note         = $database{$loc_locus_name}{"note"};
-        my $loc_nuc_seq      = $database{$loc_locus_name}{"sequence"};
+    if ( $locGeneLocusName ne "" ) {
+        my $locStartOfGene        = $database{$locGeneLocusName}{"start"};
+        my $locEndOfGene          = $database{$locGeneLocusName}{"end"};
+        my $locStrandDirection       = $database{$locGeneLocusName}{"strand"};
+        my $locTranslationTable = $database{$locGeneLocusName}{"transl_table"};
+        my $loc_product      = $database{$locGeneLocusName}{"product"};
+        my $loc_note         = $database{$locGeneLocusName}{"note"};
+        my $loc_nuc_seq      = $database{$locGeneLocusName}{"sequence"};
 
-        if ( $loc_strand == 1 ) {
-            $snp_gene_pos = ( ( $loc_snp_pos - $loc_start ) + 1 );
+        if ( $locStrandDirection == 1 ) {
+            $snpPosInGene = ( ( $locSnpPosInGenome - $locStartOfGene ) + 1 );
         }
-        elsif ( $loc_strand == -1 ) {
-            $snp_gene_pos = ( ( $loc_end - $loc_snp_pos ) + 1 );
+        elsif ( $locStrandDirection == -1 ) {
+            $snpPosInGene = ( ( $locEndOfGene - $locSnpPosInGenome ) + 1 );
 
             $alt =~ tr/ACGT/TGCA/;
             $ref =~ tr/ACGT/TGCA/;
 
         }
-        if ( $loc_end > $loc_start ) {
-            $gene_length = ( $loc_end - $loc_start ) + 1;
+        if ( $locEndOfGene > $locStartOfGene ) {
+            $gene_length = ( $locEndOfGene - $locStartOfGene ) + 1;
         }
-        elsif ( $loc_start > $loc_end ) {
-            $gene_length = ( $loc_start - $loc_end ) + 1;
+        elsif ( $locStartOfGene > $locEndOfGene ) {
+            $gene_length = ( $locStartOfGene - $locEndOfGene ) + 1;
         }
 
         if ( length($alt) > length($ref) ) {
-            $snp_type = "insertion";
+            $typeOfSNP = "insertion";
 
+<<<<<<< HEAD
+            # $alt =~ /^(?<left>$ref)(?<right>.*)/;
+
+            # $indel=uc($2);
+
+            # if ($locSnpPosInGenome eq "2704884")
+            # {
+            # print $+{left} . "\t" . $+{right} . "\n";
+            #     exit;
+            # }
+
+            # $locGeneLocusName = "" if $+{left} eq "" || $+{right} eq "";
+
+=======
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
             $indel = $alt;
-            if ( $loc_strand == -1 ) {
+            if ( $locStrandDirection == -1 ) {
                 $indel = reverse($indel);
                 $ref   = reverse($ref);
             }
@@ -981,13 +1490,13 @@ sub get_indel_info {
 
         }
         elsif ( length($alt) < length($ref) ) {
-            $snp_type = "deletion";
+            $typeOfSNP = "deletion";
 
             # $ref =~ /^(?<left>$alt)(?<right>.*)/;
 
-            # $loc_locus_name = "" if $+{left} eq "" || $+{right} eq "";
+            # $locGeneLocusName = "" if $+{left} eq "" || $+{right} eq "";
             $indel = $ref;
-            if ( $loc_strand == -1 ) {
+            if ( $locStrandDirection == -1 ) {
 
                 $ref =~ tr/ACGTacgt/TGCAtgca/;
                 $indel =~ tr/ACGTacgt/TGCAtgca/;
@@ -1007,12 +1516,12 @@ sub get_indel_info {
 
         }
 
-        if ( $snp_type eq "insertion" ) {
+        if ( $typeOfSNP eq "insertion" ) {
             $full_formated_indel
                 = lc($ref) . "/" . lc($ref) . uc($indel);
 
         }
-        elsif ( $snp_type eq "deletion" ) {
+        elsif ( $typeOfSNP eq "deletion" ) {
             $full_formated_indel
                 = lc($ref) . uc($indel) . "/" . lc($ref);
 
@@ -1025,31 +1534,31 @@ sub get_indel_info {
         $loc_AACI_flag = "----";
 
         my $standard_report
-            = "$loc_locus_name\t$loc_snp_pos\t$snp_gene_pos"
-            . substr( $snp_type, 0, 3 )
-            . "$indel\t$full_formated_indel\t$frame_shift\t$snp_type\t$loc_product\n";
+            = "$locGeneLocusName\t$locSnpPosInGenome\t$snpPosInGene"
+            . substr( $typeOfSNP, 0, 3 )
+            . "$indel\t$full_formated_indel\t$frame_shift\t$typeOfSNP\t$loc_product\n";
         my $full_report
-            = "$loc_locus_name\t$loc_snp_pos\t$snp_gene_pos"
-            . substr( $snp_type, 0, 3 )
-            . "$indel\t$full_formated_indel\t$frame_shift\t$snp_type\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n";
+            = "$locGeneLocusName\t$locSnpPosInGenome\t$snpPosInGene"
+            . substr( $typeOfSNP, 0, 3 )
+            . "$indel\t$full_formated_indel\t$frame_shift\t$typeOfSNP\t$tang\t$gd\t$blossum45\t$pam30\t$loc_AACI_flag\t$loc_product\n";
 
-        %locus_info_h = (
-            "locus"            => $loc_locus_name,
-            "snp_genome_pos"   => $loc_snp_pos,
-            "start"            => $loc_start,
-            "end"              => $loc_end,
-            "strand"           => $loc_strand,
+        %LocusInfoProvider = (
+            "locus"            => $locGeneLocusName,
+            "snp_genome_pos"   => $locSnpPosInGenome,
+            "start"            => $locStartOfGene,
+            "end"              => $locEndOfGene,
+            "strand"           => $locStrandDirection,
             "product"          => $loc_product,
             "sequence"         => $loc_nuc_seq,
-            "snp_gene_pos"     => $snp_gene_pos,
-            "snp_type"         => $snp_type,
+            "snp_gene_pos"     => $snpPosInGene,
+            "snp_type"         => $typeOfSNP,
             "note"             => $loc_note,
             "gene_length"      => $gene_length,
             "indel"            => $indel,
             "ref"              => lc($ref),
             "formated_indel"   => $formated_indel,
             "frame_shift"      => $frame_shift,
-            "short_indel_note" => substr( $snp_type, 0, 3 ),
+            "short_indel_note" => substr( $typeOfSNP, 0, 3 ),
             "tang"             => $tang,
             "gd"               => $gd,
             "blossum45"        => $blossum45,
@@ -1061,25 +1570,25 @@ sub get_indel_info {
                 # "protein_length" => scalar(@codons) - 1,
 
         );
-        return %locus_info_h;
+        return %LocusInfoProvider;
 
-        #     "locus"            => $loc_locus_name,
-        #     "snp_genome_pos"   => $loc_snp_pos,
-        #     "start"            => $loc_start,
-        #     "end"              => $loc_end,
-        #     "strand"           => $loc_strand,
+        #     "locus"            => $locGeneLocusName,
+        #     "snp_genome_pos"   => $locSnpPosInGenome,
+        #     "start"            => $locStartOfGene,
+        #     "end"              => $locEndOfGene,
+        #     "strand"           => $locStrandDirection,
         #     "product"          => $loc_product,
         #     "sequence"         => $loc_nuc_seq,
-        #     "snp_gene_pos"     => $snp_gene_pos,
-        #     "snp_type"         => $snp_type,
+        #     "snp_gene_pos"     => $snpPosInGene,
+        #     "snp_type"         => $typeOfSNP,
         #     "note"             => $loc_note,
         #     "gene_length"      => $gene_length,
         #     "indel"            => $indel,
         #     "ref"              => lc($ref),
         #     "formated_indel"   => $formated_indel,
         #     "frame_shift"      => $frame_shift,
-        #     "short_indel_note" => substr( $snp_type, 0, 3 )
-        # # return %locus_info_h;
+        #     "short_indel_note" => substr( $typeOfSNP, 0, 3 )
+        # # return %LocusInfoProvider;
         $loc_AACI_flag = "----";
     }
 
@@ -1088,6 +1597,158 @@ sub get_indel_info {
     }
 }
 
+<<<<<<< HEAD
+# sub get_indel_info_old {
+
+#     # my $locSnpPosInGenome    = shift;
+#     # my $loc_alt        = shift;
+#     my ( $locSnpPosInGenome, $ref, $alt ) = @_;
+#     my $locGeneLocusName = "";
+#     my %LocusInfoProvider;
+#     my $snpPosInGene;
+#     my $typeOfSNP         = "";
+#     my $gene_length      = 0;
+#     my $indel            = "";
+#     my $indel_bp_count   = 0;
+#     my $frame_shift      = "";
+#     my $formated_indel   = "";
+#     my $short_indel_note = "";
+
+#     # my $common="";
+#     foreach my $key ( keys %database ) {
+#         if (   $locSnpPosInGenome > scalar $database{$key}{'start'}
+#             && $locSnpPosInGenome < scalar $database{$key}{'end'} )
+#         {
+#             $locGeneLocusName = $key;
+#             last;
+#         }
+
+#     }
+
+#     if ( $locGeneLocusName ne "" ) {
+#         my $locStartOfGene        = $database{$locGeneLocusName}{"start"};
+#         my $locEndOfGene          = $database{$locGeneLocusName}{"end"};
+#         my $locStrandDirection       = $database{$locGeneLocusName}{"strand"};
+#         my $locTranslationTable = $database{$locGeneLocusName}{"transl_table"};
+#         my $loc_product      = $database{$locGeneLocusName}{"product"};
+#         my $loc_note         = $database{$locGeneLocusName}{"note"};
+#         my $loc_nuc_seq      = $database{$locGeneLocusName}{"sequence"};
+
+#         if ( $locStrandDirection == 1 ) {
+#             $snpPosInGene = ( ( $locSnpPosInGenome - $locStartOfGene ) + 1 );
+#         }
+#         elsif ( $locStrandDirection == -1 ) {
+#             $snpPosInGene = ( ( $locEndOfGene - $locSnpPosInGenome ) + 1 );
+
+#             $alt =~ tr/ACGT/TGCA/;
+#             $ref =~ tr/ACGT/TGCA/;
+
+#         }
+#         if ( $locEndOfGene > $locStartOfGene ) {
+#             $gene_length = ( $locEndOfGene - $locStartOfGene ) + 1;
+#         }
+#         elsif ( $locStartOfGene > $locEndOfGene ) {
+#             $gene_length = ( $locStartOfGene - $locEndOfGene ) + 1;
+#         }
+
+#         if ( length($alt) > length($ref) ) {
+#             $typeOfSNP = "insertion";
+#             $alt =~ /^(?<left>$ref)(?<right>.*)/;
+
+#             # $indel=uc($2);
+
+#             # if ($locSnpPosInGenome eq "2704884")
+#             # {
+#             # print $+{left} . "\t" . $+{right} . "\n";
+#             #     exit;
+#             # }
+#             $locGeneLocusName = "" if $+{left} eq "" || $+{right} eq "";
+#             $indel = uc( $+{right} );
+#             if ( $locStrandDirection == -1 ) {
+#                 $indel = reverse($indel);
+#                 $ref   = reverse($ref);
+#             }
+
+#             # $indel_bp_count=length($indel)/3;
+#             $indel_bp_count = length($indel) % 3;
+
+#             # print length($indel). "\t$indel_bp_count\n";
+
+#             if ( $indel_bp_count == 0 ) {
+#                 $frame_shift = "no_frame_shift";
+#             }
+#             elsif ( $indel_bp_count != 0 ) {
+#                 $frame_shift = "frame_shift";
+#             }
+
+#             $formated_indel = lc($ref) . uc($indel);
+
+#         }
+#         elsif ( length($alt) < length($ref) ) {
+#             $typeOfSNP = "deletion";
+
+#             $ref =~ /^(?<left>$alt)(?<right>.*)/;
+
+#             $locGeneLocusName = "" if $+{left} eq "" || $+{right} eq "";
+#             $indel = uc( $+{left} );
+#             if ( $locStrandDirection == -1 ) {
+#                 $indel = reverse($indel);
+#                 $ref   = reverse($ref);
+#             }
+
+#             $indel_bp_count = length($indel) % 3;
+
+#             if ( $indel_bp_count == 0 ) {
+#                 $frame_shift = "no_frame_shift";
+#             }
+#             elsif ( $indel_bp_count != 0 ) {
+#                 $frame_shift = "frame_shift";
+#             }
+#             $formated_indel = lc($ref) . uc($indel);
+
+#         }
+
+#         %LocusInfoProvider = (
+#             "locus"            => $locGeneLocusName,
+#             "snp_genome_pos"   => $locSnpPosInGenome,
+#             "start"            => $locStartOfGene,
+#             "end"              => $locEndOfGene,
+#             "strand"           => $locStrandDirection,
+#             "product"          => $loc_product,
+#             "sequence"         => $loc_nuc_seq,
+#             "snp_gene_pos"     => $snpPosInGene,
+#             "snp_type"         => $typeOfSNP,
+#             "note"             => $loc_note,
+#             "gene_length"      => $gene_length,
+#             "indel"            => $indel,
+#             "ref"              => lc($ref),
+#             "formated_indel"   => $formated_indel,
+#             "frame_shift"      => $frame_shift,
+#             "short_indel_note" => substr( $typeOfSNP, 0, 3 )
+
+#                 # "protein_length" => scalar(@codons) - 1,
+
+#         );
+#         if ( $typeOfSNP eq "insertion" ) {
+#             $LocusInfoProvider{full_formated_indel}
+#                 = lc($ref) . "/" . lc($ref) . uc($indel);
+
+#         }
+#         elsif ( $typeOfSNP eq "deletion" ) {
+#             $LocusInfoProvider{full_formated_indel}
+#                 = lc($ref) . uc($indel) . "/" . lc($ref);
+
+#         }
+
+#         return %LocusInfoProvider;
+#     }
+#     else {
+#         return;
+#     }
+# }
+
+=======
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
 # ------------------------------------------------------------
 #
 #
@@ -1104,7 +1765,7 @@ sub use_snp_classification_intergenic {
     my $snp_count        = 0;
     my $tab              = "";
     my $res              = "";
-    my $loc_ref_name     = "";
+    my $locRefGenomeName     = "";
     my $loc_snp_notation = "";
     my $position_type    = "";
 
@@ -1115,8 +1776,8 @@ sub use_snp_classification_intergenic {
             or croak "cannot open < $file: $!";
         while (<$fh>) {
             my $str = "$_";
-            $str =~ /.*(?<ref_genome>$ref_genome_name)/x;
-            if (   $+{ref_genome} eq "$ref_genome_name"
+            $str =~ /.*(?<ref_genome>$RefGenomeName)/x;
+            if (   $+{ref_genome} eq "$RefGenomeName"
                 && $+{ref_genome} ne "" )
             {
                 $str =~ /^\S+\W(\d+)/x;
@@ -1135,14 +1796,37 @@ sub use_snp_classification_intergenic {
                     $class_found = 1;
                 }
             }
-            elsif ($+{ref_genome} ne "$ref_genome_name"
+            elsif ($+{ref_genome} ne "$RefGenomeName"
                 && $+{ref_genome} ne "" )
             {
-                print "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                print "\t\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
                 last;
             }
 
+<<<<<<< HEAD
+     #         $locRefGenomeName = $+{ref_genome};
+     #         $str =~ /^\S+\W+(?<genome_pos>\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
+
+            #         # $position_type= &check_position($+{genome_pos});
+            #         if ( length($2) == 1 && length($3) == 1 ) {
+
+#             # print "!\n" if ($1 =="1673425");
+#             # print &check_position($1). "\n";
+#             if ( $locRefGenomeName ne $RefGenomeName ) {
+#                 print
+#                     "\t\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
+#                 last;
+#             }
+
+            #             print $+{genome_pos} . "\n";
+
+            #             # $class_query
+            #             #     = uc( $LocusInfoReader{'locus'} . "_" . $LocusInfoReader{'snp'} );
+
+            #         }
+=======
             #         $loc_ref_name = $+{ref_genome};
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
         }
         if ( $class_found == 0 ) {
             print "\t---";
@@ -1174,7 +1858,7 @@ sub use_snp_classification_coding {
     my $snp_count        = 0;
     my $tab              = "";
     my $res              = "";
-    my $loc_ref_name     = "";
+    my $locRefGenomeName     = "";
     my $loc_snp_notation = "";
     my $position_type    = "";
 
@@ -1185,8 +1869,8 @@ sub use_snp_classification_coding {
             or croak "cannot open < $file: $!";
         while (<$fh>) {
             my $str = "$_";
-            $str =~ /.*(?<ref_genome>$ref_genome_name)/x;
-            $loc_ref_name = $+{ref_genome};
+            $str =~ /.*(?<ref_genome>$RefGenomeName)/x;
+            $locRefGenomeName = $+{ref_genome};
             $str =~ /^\S+\W+(?<genome_pos>\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
 
             # $position_type= &check_position($+{genome_pos});
@@ -1194,24 +1878,24 @@ sub use_snp_classification_coding {
 
                 # print "!\n" if ($1 =="1673425");
                 # print &check_position($1). "\n";
-                my %tmp = &get_locus_info( $+{genome_pos}, $3 );
-                if ( $loc_ref_name ne $ref_genome_name ) {
+                my %LocusInfoReader = &get_locus_info( $+{genome_pos}, $3 );
+                if ( $locRefGenomeName ne $RefGenomeName ) {
                     print
-                        "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                        "\t\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
                     last;
                 }
-                if ($tmp{'locus'} ne ""
+                if ($LocusInfoReader{'locus'} ne ""
 
-                    # && $tmp{'alt_aa_long'} ne 'STOP'
-                    # && $tmp{'ref_aa_long'} ne 'STOP'
-                    && $tmp{'alt_aa_long'} ne 'BAD_CODON'
-                    && $tmp{'ref_aa_long'} ne 'BAD_CODON'
+                    # && $LocusInfoReader{'alt_aa_long'} ne 'STOP'
+                    # && $LocusInfoReader{'ref_aa_long'} ne 'STOP'
+                    && $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+                    && $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON'
                     )
                 {
                     # $class_query
-                    #     = uc( $tmp{'locus'} . "_" . $tmp{'snp'} );
-                    $query_locus = uc( $tmp{'locus'} );
-                    $query_snp   = uc( $tmp{'snp'} );
+                    #     = uc( $LocusInfoReader{'locus'} . "_" . $LocusInfoReader{'snp'} );
+                    $query_locus = uc( $LocusInfoReader{'locus'} );
+                    $query_snp   = uc( $LocusInfoReader{'snp'} );
 
                     # print "$class_query\n";
                     $loc_snp_notation = &load_coding_snp(
@@ -1219,17 +1903,17 @@ sub use_snp_classification_coding {
                         $position_type,
                         $query_locus,
                         $query_snp,
-                        $tmp{'snp_genome_pos'} . "_"
-                            . $tmp{'ref'} . ">"
-                            . $tmp{'alt'},
-                        $tmp{'ref_aa_short'}
-                            . $tmp{'aa_pos'}
-                            . $tmp{'alt_aa_short'},
-                        uc(       $tmp{'ref_aa_long'}
-                                . $tmp{'aa_pos'}
-                                . $tmp{'alt_aa_long'}
+                        $LocusInfoReader{'snp_genome_pos'} . "_"
+                            . $LocusInfoReader{'ref'} . ">"
+                            . $LocusInfoReader{'alt'},
+                        $LocusInfoReader{'ref_aa_short'}
+                            . $LocusInfoReader{'aa_pos'}
+                            . $LocusInfoReader{'alt_aa_short'},
+                        uc(       $LocusInfoReader{'ref_aa_long'}
+                                . $LocusInfoReader{'aa_pos'}
+                                . $LocusInfoReader{'alt_aa_long'}
                         ),
-                        $tmp{'snp'}
+                        $LocusInfoReader{'snp'}
 
                     );
 
@@ -1333,63 +2017,162 @@ sub use_snp_classification_coding {
 #     }
 # }
 
+<<<<<<< HEAD
+# ------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------
+
+# sub annotate_vcf_formatted {
+#     my $locInputFile = shift;
+#     my %snp_per_gene_h;
+#     my %gene_mutations_h;
+
+#     # my @snp_per_gene_a;
+#     my $locRefGenomeName  = "";
+#     my $loc_AACI_flag = "---";
+#     open( my $fh, "<", $locInputFile )
+#         or croak "cannot open < $locInputFile: $!";
+#     while (<$fh>) {
+#         my $str = "$_";
+#         $str =~ /.*($RefGenomeName)/x;
+#         $locRefGenomeName = $1;
+#         $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
+#         if ( length($2) == 1 && length($3) == 1 ) {
+#             my %LocusInfoReader = &get_locus_info( $1, $3 );
+#             if ( $locRefGenomeName ne $RefGenomeName ) {
+#                 print "REFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
+#                 exit;
+#             }
+
+#  # print "$LocusInfoReader{'alt_aa_long'}\t!!!!!\n" if $LocusInfoReader{'alt_aa_long'} eq "BAD_CODON";
+#             if ($LocusInfoReader{'locus'} ne ""
+
+#                 # && $LocusInfoReader{'alt_aa_long'} ne 'STOP'
+#                 # && $LocusInfoReader{'ref_aa_long'} ne 'STOP'
+#                 && $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+#                 && $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON'
+#                 )
+#             {
+
+#                 # $snp_per_gene_h{$LocusInfoReader{'locus'}}=$LocusInfoReader{'snp'};
+#                 my $locGeneLocusName = $LocusInfoReader{'locus'};
+#                 my $loc_snp        = $LocusInfoReader{'snp'};
+#                 my $locSnpPosInGenome    = $LocusInfoReader{'snp_genome_pos'};
+#                 if ( $options{action} eq "annotation.2" ) {
+#                     $snp_per_gene_h{$locGeneLocusName}{$locSnpPosInGenome}
+#                         = "$loc_snp\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}";
+
+#                 }
+#                 elsif ( $options{action} eq "annotation.3" ) {
+
+#                     $loc_AACI_flag
+#                         = &calc_aa_change_info( $LocusInfoReader{'ref_aa_long'},
+#                         $LocusInfoReader{'alt_aa_long'}, $LocusInfoReader{'snp_type'} );
+
+#                     $snp_per_gene_h{$locGeneLocusName}{$locSnpPosInGenome}
+#                         = "$loc_snp\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$loc_AACI_flag";
+#                 }
+
+#             }
+
+#         }
+
+#     }
+#     close $fh;
+
+#     # print Dumper (%snp_per_gene_h);
+
+#     foreach my $key ( sort keys %snp_per_gene_h ) {
+
+#         my $key2_count = 0;
+#         foreach my $key2 ( sort keys %{ $snp_per_gene_h{$key} } ) {
+
+#             # foreach my $key3 ( keys %{ $hash{$key}{$key2} } ) {
+#             # $value = $hash{$key}{$key2}->{$key3};
+#             $key2_count++;
+#             if ( $key2_count == 1 ) {
+#                 print "$key" . "\t"
+#                     . $database{$key}{'product'} . "\t"
+#                     . "\n\t$key2\t$snp_per_gene_h{$key}{$key2}\n";
+
+#             }
+#             else {
+#                 print "\t$key2\t$snp_per_gene_h{$key}{$key2}\n";
+
+#             }
+
+#             # .
+#             # .
+#             # Do something with $value
+#             # .
+#             # .
+#             # .
+#             # }
+#         }
+#     }
+
+# }
+
+=======
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
 sub make_axt_sequence {
 
-    # my $loc_file_in = shift;
+    # my $locInputFile = shift;
 
     my @files = glob('*.vcf');
     my %snp_per_gene_h;
     my %gene_mutations_h;
 
     # my @snp_per_gene_a;
-    my $loc_ref_name  = "";
+    my $locRefGenomeName  = "";
     my $loc_AACI_flag = "---";
     my $nuc_seq       = $database{ $options{locus} }{sequence};
 
-# print "$ref_genome_name\n" . $database{$options{locus}}{sequence} . "_" . $database{$options{locus}}{sequence}  . "\n\n";
-    foreach my $loc_file_in (@files) {
+# print "$RefGenomeName\n" . $database{$options{locus}}{sequence} . "_" . $database{$options{locus}}{sequence}  . "\n\n";
+    foreach my $locInputFile (@files) {
 
-        open( my $fh, "<", $loc_file_in )
-            or croak "cannot open < $loc_file_in: $!";
+        open( my $fh, "<", $locInputFile )
+            or croak "cannot open < $locInputFile: $!";
         while (<$fh>) {
             my $str = "$_";
-            $str =~ /.*($ref_genome_name)/x;
-            $loc_ref_name = $1;
+            $str =~ /.*($RefGenomeName)/x;
+            $locRefGenomeName = $1;
             $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
             if ( length($2) == 1 && length($3) == 1 ) {
-                my %tmp = &get_locus_info( $1, $3 );
-                if ( $loc_ref_name ne $ref_genome_name ) {
-                    print "REFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                my %LocusInfoReader = &get_locus_info( $1, $3 );
+                if ( $locRefGenomeName ne $RefGenomeName ) {
+                    print "REFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
                     exit;
                 }
 
- # print "$tmp{'alt_aa_long'}\t!!!!!\n" if $tmp{'alt_aa_long'} eq "BAD_CODON";
+ # print "$LocusInfoReader{'alt_aa_long'}\t!!!!!\n" if $LocusInfoReader{'alt_aa_long'} eq "BAD_CODON";
  # print $options{locus};
- # print $tmp{locus} . "\t" . $options{locus} . "\n";
-                if ($tmp{'locus'} ne ""
+ # print $LocusInfoReader{locus} . "\t" . $options{locus} . "\n";
+                if ($LocusInfoReader{'locus'} ne ""
 
-                    # && $tmp{'alt_aa_long'} ne 'STOP'
-                    # && $tmp{'ref_aa_long'} ne 'STOP'
-                    && $tmp{'alt_aa_long'} ne 'BAD_CODON'
-                    && $tmp{'ref_aa_long'} ne 'BAD_CODON'
-                    && uc( $tmp{locus} ) eq uc( $options{locus} )
+                    # && $LocusInfoReader{'alt_aa_long'} ne 'STOP'
+                    # && $LocusInfoReader{'ref_aa_long'} ne 'STOP'
+                    && $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+                    && $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON'
+                    && uc( $LocusInfoReader{locus} ) eq uc( $options{locus} )
 
-                    # && $tmp{locus} eq $options{locus}
+                    # && $LocusInfoReader{locus} eq $options{locus}
                     )
                 {
 
-                    # $snp_per_gene_h{$tmp{'locus'}}=$tmp{'snp'};
+                    # $snp_per_gene_h{$LocusInfoReader{'locus'}}=$LocusInfoReader{'snp'};
 
-                    my $loc_locus_name = $tmp{'locus'};
-                    my $loc_snp        = $tmp{'snp'};
-                    my $loc_snp_pos    = $tmp{'snp_genome_pos'};
-                    $snp_per_gene_h{$loc_locus_name}{$loc_snp_pos}
-                        = "$loc_snp\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}";
+                    my $locGeneLocusName = $LocusInfoReader{'locus'};
+                    my $loc_snp        = $LocusInfoReader{'snp'};
+                    my $locSnpPosInGenome    = $LocusInfoReader{'snp_genome_pos'};
+                    $snp_per_gene_h{$locGeneLocusName}{$locSnpPosInGenome}
+                        = "$loc_snp\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}";
 
-                    $gene_mutations_h{$loc_locus_name}{$loc_snp_pos}{pos}
-                        = $tmp{snp_gene_pos};
-                    $gene_mutations_h{$loc_locus_name}{$loc_snp_pos}{ref}
-                        = $tmp{ref};
+                    $gene_mutations_h{$locGeneLocusName}{$locSnpPosInGenome}{pos}
+                        = $LocusInfoReader{snp_gene_pos};
+                    $gene_mutations_h{$locGeneLocusName}{$locSnpPosInGenome}{ref}
+                        = $LocusInfoReader{ref};
 
                 }
                 else {
@@ -1445,7 +2228,7 @@ sub make_axt_sequence {
         }
 
     }
-    print "$ref_genome_name\_"
+    print "$RefGenomeName\_"
         . length($nuc_seq)
         . "\n$nuc_seq\n"
         . $database{ $options{locus} }{sequence} . "\n\n";
@@ -1491,49 +2274,49 @@ sub print_unique_snp_info {
             and length($ref) == 1 )
         {
 
-            my %tmp = &get_locus_info( $key, $alt, 1 );
-            $miss_stat++ if $tmp{snp_type} eq "missense";
-            $syn_stat++  if $tmp{snp_type} eq "synonymous";
+            my %LocusInfoReader = &get_locus_info( $key, $alt, 1 );
+            $miss_stat++ if $LocusInfoReader{snp_type} eq "missense";
+            $syn_stat++  if $LocusInfoReader{snp_type} eq "synonymous";
 
             if (    $options{lvl} == 1
-                and $tmp{locus} ne ""
-                and $tmp{'alt_aa_long'} ne 'BAD_CODON'
-                and $tmp{'ref_aa_long'} ne 'BAD_CODON' )
+                and $LocusInfoReader{locus} ne ""
+                and $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+                and $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON' )
             {
 
                 push( @results_a,
-                    "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\n"
+                    "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{'product'}\n"
                 );
 
             }
             elsif ( $options{lvl} == 2
-                and $tmp{locus} ne ""
-                and $tmp{'alt_aa_long'} ne 'BAD_CODON'
-                and $tmp{'ref_aa_long'} ne 'BAD_CODON' )
+                and $LocusInfoReader{locus} ne ""
+                and $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+                and $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON' )
             {
 
                 push( @results_a,
-                    "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\t$files_per_snp_size/$count_f\n"
+                    "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{'product'}\t$files_per_snp_size/$count_f\n"
                 );
             }
             elsif ( $options{lvl} == 3
-                and $tmp{locus} ne ""
-                and $tmp{'alt_aa_long'} ne 'BAD_CODON'
-                and $tmp{'ref_aa_long'} ne 'BAD_CODON' )
+                and $LocusInfoReader{locus} ne ""
+                and $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+                and $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON' )
             {
 
                 push( @results_a,
-                    "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{tang}\t$tmp{gd}\t$tmp{blossum45}\t$tmp{pam30}\t$tmp{AACI}\t$tmp{'product'}\n"
+                    "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{tang}\t$LocusInfoReader{gd}\t$LocusInfoReader{blossum45}\t$LocusInfoReader{pam30}\t$LocusInfoReader{AACI}\t$LocusInfoReader{'product'}\n"
                 );
             }
             elsif ( $options{lvl} == 4
-                and $tmp{locus} ne ""
-                and $tmp{'alt_aa_long'} ne 'BAD_CODON'
-                and $tmp{'ref_aa_long'} ne 'BAD_CODON' )
+                and $LocusInfoReader{locus} ne ""
+                and $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+                and $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON' )
             {
 
                 push( @results_a,
-                    "$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}\t"
+                    "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{'product'}\t"
                         . "DP:"
                         . $DP_min . "-"
                         . $DP_max
@@ -1541,28 +2324,28 @@ sub print_unique_snp_info {
                         . "\n" );
             }
             elsif ( $options{lvl} == 5
-                and $tmp{locus} ne ""
-                and $tmp{'alt_aa_long'} ne 'BAD_CODON'
-                and $tmp{'ref_aa_long'} ne 'BAD_CODON' )
+                and $LocusInfoReader{locus} ne ""
+                and $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+                and $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON' )
             {
 
-                $snp_per_gene_h{ $tmp{'locus'} }{ $tmp{'snp_genome_pos'} }
-                    = "\t$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{'product'}"
+                $snp_per_gene_h{ $LocusInfoReader{'locus'} }{ $LocusInfoReader{'snp_genome_pos'} }
+                    = "\t$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{'product'}"
 
             }
             elsif ( $options{lvl} == 6
-                and $tmp{locus} ne ""
-                and $tmp{'alt_aa_long'} ne 'BAD_CODON'
-                and $tmp{'ref_aa_long'} ne 'BAD_CODON' )
+                and $LocusInfoReader{locus} ne ""
+                and $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+                and $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON' )
             {
 
-                $snp_per_gene_h{ $tmp{'locus'} }{ $tmp{'snp_genome_pos'} }
-                    = "\t$tmp{'locus'}\t$tmp{'snp_genome_pos'}\t$tmp{'snp'}\t$tmp{'ref_codon'}/$tmp{'alt_codon'}\t$tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'}\t$tmp{'snp_type'}\t$tmp{tang}\t$tmp{gd}\t$tmp{blossum45}\t$tmp{pam30}\t$tmp{AACI}\t$tmp{'product'}"
+                $snp_per_gene_h{ $LocusInfoReader{'locus'} }{ $LocusInfoReader{'snp_genome_pos'} }
+                    = "\t$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{tang}\t$LocusInfoReader{gd}\t$LocusInfoReader{blossum45}\t$LocusInfoReader{pam30}\t$LocusInfoReader{AACI}\t$LocusInfoReader{'product'}"
 
             }
 
             elsif ( $options{lvl} == 1
-                and $tmp{locus} eq ""
+                and $LocusInfoReader{locus} eq ""
                 and $options{intergenic} )
             {
 
@@ -1683,17 +2466,17 @@ sub open_multiple_vcfs {
             or croak "cannot open < $file: $!";
         while (<$fh>) {
             my $str = "$_";
-            $str =~ /.*($ref_genome_name)/x;
+            $str =~ /.*($RefGenomeName)/x;
             next if $str =~ /^#/;
-            my $loc_ref_name = $1;
+            my $locRefGenomeName = $1;
             $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
 
             # if ( length($2) == 1 && length($3) == 1 ) {
 
-            # my %tmp = &get_locus_info( $1, $3 );
-            if ( $loc_ref_name ne $ref_genome_name ) {
+            # my %LocusInfoReader = &get_locus_info( $1, $3 );
+            if ( $locRefGenomeName ne $RefGenomeName ) {
                 print
-                    "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                    "$file\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
                 last;
             }
             $all_snp_h{$1}{'file'}     .= "$file\t";
@@ -1736,6 +2519,284 @@ sub open_multiple_vcfs {
     }
 }
 
+<<<<<<< HEAD
+# sub find_uniq_genes {
+#     my @files       = glob('*.vcf');
+#     my $count_f     = @files;       # считаем их количество
+#     my $class_found = 0;
+#     my $class_query = "";
+#     my $query_locus = "";
+#     my $query_snp   = "";
+#     my @class_a;
+#     my $snp_count    = 0;
+#     my $tab          = "";
+#     my $res          = "";
+#     my $locRefGenomeName = "";
+#     my %all_snp_h;
+#     my @results_a;
+
+#     my $start = time;
+
+#     foreach my $file (@files) {
+
+#         # print "$file";
+#         open( my $fh, "<", $file )
+#             or croak "cannot open < $file: $!";
+#         while (<$fh>) {
+#             my $str = "$_";
+#             $str =~ /.*($RefGenomeName)/x;
+#             next if $str =~ /^#/;
+#             $locRefGenomeName = $1;
+#             $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
+
+#             # if ( length($2) == 1 && length($3) == 1 ) {
+
+#             # my %LocusInfoReader = &get_locus_info( $1, $3 );
+#             if ( $locRefGenomeName ne $RefGenomeName ) {
+#                 print
+#                     "$file\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
+#                 last;
+#             }
+#             $all_snp_h{$1}{'file'}     .= "$file\t";
+#             $all_snp_h{$1}{'alt_list'} .= "$3\t";
+#             $all_snp_h{$1}{'alt'} = "$3";
+#             $all_snp_h{$1}{'DP'} .= "$4\t";
+
+#             # }
+
+#         }
+#         close $fh;
+
+#     }
+#     foreach my $key ( sort keys %all_snp_h ) {
+#         my $files_per_snp_size;
+#         my @filenames_a = split /\t/, $all_snp_h{$key}{'file'};
+#         my @alts        = split /\t/, $all_snp_h{$key}{'alt_list'};
+#         my @DPs         = split /\t/, $all_snp_h{$key}{'DP'};
+#         my $alt           = $all_snp_h{$key}{'alt'};
+#         my $loc_AACI_flag = "";
+#         $files_per_snp_size = @filenames_a;
+#         my $DP_min         = min @DPs;
+#         my $DP_max         = max @DPs;
+#         my $DP_average_raw = ( sum @DPs ) / $files_per_snp_size;
+#         my $DP_average     = sprintf( "%.1i", $DP_average_raw );
+
+#         # print "$key\n\t"
+#         #     . $all_snp_h{$key}{alt_list} . "\t"
+#         #     . $all_snp_h{$key}{file} . "\n";
+
+#         if ( $files_per_snp_size == $count_f ) {
+#             my %LocusInfoReader = &get_locus_info( $key, $alt );
+
+#             if ($LocusInfoReader{'locus'} ne ""
+
+#                 # && $LocusInfoReader{'alt_aa_long'} ne 'STOP'
+#                 # && $LocusInfoReader{'ref_aa_long'} ne 'STOP'
+#                 && $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+#                 && $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON'
+#                 )
+#             {
+#                 $loc_AACI_flag
+#                     = &calc_aa_change_info( $LocusInfoReader{'ref_aa_long'},
+#                     $LocusInfoReader{'alt_aa_long'}, $LocusInfoReader{'snp_type'} );
+#                 if ( $options{action} eq "uniq" ) {
+#                     push( @results_a,
+#                         "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{'product'}\t$files_per_snp_size/$count_f\n"
+#                     );
+#                 }
+#                 elsif ( $options{action} eq "uniq.1" ) {
+#                     push( @results_a,
+#                         "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{'product'}\n"
+#                     );
+
+#                 }
+#                 elsif ( $options{action} eq "uniq.6" ) {
+#                     push( @results_a,
+#                         "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$loc_AACI_flag$LocusInfoReader{'product'}\n"
+#                     );
+
+#                 }
+#                 elsif ( $options{action} eq "uniq.7" ) {
+#                     push( @results_a,
+#                         "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$loc_AACI_flag$LocusInfoReader{'product'}\t"
+#                             . "DP:"
+#                             . $DP_min . "-"
+#                             . $DP_max
+#                             . " (Avg: $DP_average)"
+#                             . "\n" );
+
+#                 }
+#                 elsif ($options{action} eq "uniq.8"
+#                     || $options{action} eq "uniq.8.1" )
+#                 {
+#                     ( my $AACI_res )
+#                         = $loc_AACI_flag
+#                         =~ /^\S+\W+\S+\W+\S+\W+\S+\s+(\W{4})/;
+
+#                     if (    $AACI_res eq "++++"
+#                         and $options{action} eq "uniq.8" )
+#                     {
+#                         push( @results_a,
+#                             "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$loc_AACI_flag$LocusInfoReader{'product'}\n"
+#                         );
+#                     }
+#                     elsif ( $AACI_res eq "++++"
+#                         and $options{action} eq "uniq.8.1" )
+#                     {
+#                         push( @results_a,
+#                             "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{'product'}\n"
+#                         );
+#                     }
+
+#                 }
+#                 elsif ( $options{action} eq "uniq.2" ) {
+#                     push( @results_a,
+#                         "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'product'}\n"
+#                     );
+
+#                 }
+
+#             }
+
+#         }
+
+#     }
+
+#     print sort @results_a;
+#     undef @results_a;
+
+#     # my $duration = time - $start;
+#     # print "Execution time: $duration s\n";
+# }
+
+# # ------------------------------------------------------------
+# #
+# #
+# # ------------------------------------------------------------
+
+# sub find_uniq_genes_formated {
+#     my @files       = glob('*.vcf');
+#     my $count_f     = @files;       # считаем их количество
+#     my $class_found = 0;
+#     my $class_query = "";
+#     my $query_locus = "";
+#     my $query_snp   = "";
+#     my @class_a;
+#     my $snp_count    = 0;
+#     my $tab          = "";
+#     my $res          = "";
+#     my $locRefGenomeName = "";
+#     my %all_snp_h;
+#     my @results_a;
+#     my %snp_per_gene_h;
+
+#     my $start = time;
+
+#     foreach my $file (@files) {
+
+#         # print "$file";
+#         open( my $fh, "<", $file )
+#             or croak "cannot open < $file: $!";
+#         while (<$fh>) {
+#             my $str = "$_";
+#             $str =~ /.*($RefGenomeName)/x;
+#             $locRefGenomeName = $1;
+#             $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
+
+#             if ( length($2) == 1 && length($3) == 1 ) {
+
+#                 # my %LocusInfoReader = &get_locus_info( $1, $3 );
+#                 if ( $locRefGenomeName ne $RefGenomeName ) {
+#                     print
+#                         "$file\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
+#                     last;
+#                 }
+#                 $all_snp_h{$1}{'file'}     .= "$file\t";
+#                 $all_snp_h{$1}{'alt_list'} .= "$3\t";
+#                 $all_snp_h{$1}{'alt'} = "$3";
+
+#             }
+
+#         }
+#         close $fh;
+
+#     }
+#     foreach my $key ( sort keys %all_snp_h ) {
+#         my $files_per_snp_size;
+#         my @filenames_a = split /\t/, $all_snp_h{$key}{'file'};
+#         my @alts        = split /\t/, $all_snp_h{$key}{'alt_list'};
+#         my $alt = $all_snp_h{$key}{'alt'};
+#         $files_per_snp_size = @filenames_a;
+#         if ( $files_per_snp_size == $count_f ) {
+#             my %LocusInfoReader = &get_locus_info( $key, $alt );
+#             if ($LocusInfoReader{'locus'} ne ""
+
+#                 # && $LocusInfoReader{'alt_aa_long'} ne 'STOP'
+#                 # && $LocusInfoReader{'ref_aa_long'} ne 'STOP'
+#                 && $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+#                 && $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON'
+#                 )
+#             {
+# # push( @results_a,
+# #     "$LocusInfoReader{'locus'}\t$LocusInfoReader{'snp_genome_pos'}\t$LocusInfoReader{'snp'}\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$LocusInfoReader{'product'}\t$files_per_snp_size/$count_f\n"
+# # );
+#                 my $locGeneLocusName = $LocusInfoReader{'locus'};
+#                 my $loc_snp        = $LocusInfoReader{'snp'};
+#                 my $locSnpPosInGenome    = $LocusInfoReader{'snp_genome_pos'};
+#                 my $loc_AACI_flag
+#                     = &calc_aa_change_info( $LocusInfoReader{'ref_aa_long'},
+#                     $LocusInfoReader{'alt_aa_long'}, $LocusInfoReader{'snp_type'} );
+#                 if ( $options{action} eq "uniq.3" ) {
+#                     $snp_per_gene_h{$locGeneLocusName}{$locSnpPosInGenome}
+#                         = "\t$locSnpPosInGenome\t$loc_snp\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$loc_AACI_flag\t$files_per_snp_size/$count_f";
+#                 }
+#                 elsif ( $options{action} eq "uniq.4" ) {
+#                     $snp_per_gene_h{$locGeneLocusName}{$locSnpPosInGenome}
+#                         = "\t$locSnpPosInGenome\t$loc_snp\t$LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'}\t$LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'}\t$LocusInfoReader{'snp_type'}\t$loc_AACI_flag";
+#                 }
+
+#             }
+
+#         }
+
+#     }
+
+#     # print sort @results_a;
+#     # print Dumper(%snp_per_gene_h);
+#     foreach my $key ( sort keys %snp_per_gene_h ) {
+#         my $key2_count = 0;
+#         foreach my $key2 ( sort keys %{ $snp_per_gene_h{$key} } ) {
+
+#             # foreach my $key3 ( keys %{ $hash{$key}{$key2} } ) {
+#             # $value = $hash{$key}{$key2}->{$key3};
+#             $key2_count++;
+#             if ( $key2_count == 1 ) {
+#                 print "$key" . "\t"
+#                     . $database{$key}{'product'} . "\t"
+#                     . "\n\t$key2\t$snp_per_gene_h{$key}{$key2}\n";
+#             }
+#             else {
+#                 print "\t$key2\t$snp_per_gene_h{$key}{$key2}\n";
+#             }
+
+#             # .
+#             # .
+#             # Do something with $value
+#             # .
+#             # .
+#             # .
+#             # }
+#         }
+#     }
+
+#     my $duration = time - $start;
+
+#     # print "Execution time: $duration s\n";
+
+# }
+
+=======
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
 # # ------------------------------------------------------------
 # #
 # #
@@ -1752,7 +2813,7 @@ sub compare_files_by_snp {
     my $snp_count    = 0;
     my $tab          = "";
     my $res          = "";
-    my $loc_ref_name = "";
+    my $locRefGenomeName = "";
     my %all_snp_h;
     my @results_a;
     my %results_h;
@@ -1773,16 +2834,16 @@ sub compare_files_by_snp {
             or croak "cannot open < $file: $!";
         while (<$fh>) {
             my $str = "$_";
-            $str =~ /.*($ref_genome_name)/x;
-            $loc_ref_name = $1;
+            $str =~ /.*($RefGenomeName)/x;
+            $locRefGenomeName = $1;
             $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
 
             if ( length($2) == 1 && length($3) == 1 ) {
 
-                # my %tmp = &get_locus_info( $1, $3 );
-                if ( $loc_ref_name ne $ref_genome_name ) {
+                # my %LocusInfoReader = &get_locus_info( $1, $3 );
+                if ( $locRefGenomeName ne $RefGenomeName ) {
                     print
-                        "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                        "$file\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
                     last;
                 }
                 $all_snp_h{$1}{'pos'} = "$1";
@@ -1826,13 +2887,13 @@ sub compare_files_by_snp {
     }
 
     foreach my $key ( sort keys %results_h ) {
-        my %tmp = &get_locus_info( $key, $results_h{$key}{'alt'} );
-        if ($tmp{'locus'} ne ""
+        my %LocusInfoReader = &get_locus_info( $key, $results_h{$key}{'alt'} );
+        if ($LocusInfoReader{'locus'} ne ""
 
-            # && $tmp{'alt_aa_long'} ne 'STOP'
-            # && $tmp{'ref_aa_long'} ne 'STOP'
-            && $tmp{'alt_aa_long'} ne 'BAD_CODON'
-            && $tmp{'ref_aa_long'} ne 'BAD_CODON'
+            # && $LocusInfoReader{'alt_aa_long'} ne 'STOP'
+            # && $LocusInfoReader{'ref_aa_long'} ne 'STOP'
+            && $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+            && $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON'
             )
         {
             # if ( $options{color} == 1 ) {
@@ -1850,7 +2911,7 @@ sub compare_files_by_snp {
                     # . "\nSNP_POS:\n\t $key";
                     print "\nLOCUS:\n\t";
                     print
-                        "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
+                        "$LocusInfoReader{'locus'} $key $LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'} $LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'} $LocusInfoReader{'snp_type'} $LocusInfoReader{'product'} \n";
 
                     # print "***: $matched\n";
                     print "FOUND_IN_W_TARGET ("
@@ -1873,7 +2934,7 @@ sub compare_files_by_snp {
                 # . "\nSNP_POS:\n\t $key";
                 print "\nLOCUS:\n\t";
                 print
-                    "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
+                    "$LocusInfoReader{'locus'} $key $LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'} $LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'} $LocusInfoReader{'snp_type'} $LocusInfoReader{'product'} \n";
                 print "FOUND_IN ("
                     . $results_h{$key}{'count'} . "/"
                     . scalar(@files)
@@ -1892,7 +2953,7 @@ sub compare_files_by_snp {
 # else {
 #     print "\n"
 #         . "-" x 50
-#         . "\nLOCUS:\n\t $tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n"
+#         . "\nLOCUS:\n\t $LocusInfoReader{'locus'} $key $LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'} $LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'} $LocusInfoReader{'snp_type'} $LocusInfoReader{'product'} \n"
 #         . "FOUND_IN ("
 #         . $results_h{$key}{'count'} . "/"
 #         . scalar(@files)
@@ -1943,7 +3004,7 @@ sub compare_list_by_snp {
     my $snp_count    = 0;
     my $tab          = "";
     my $res          = "";
-    my $loc_ref_name = "";
+    my $locRefGenomeName = "";
     my %all_snp_h;
     my @results_a;
     my %results_h;
@@ -2000,16 +3061,16 @@ sub compare_list_by_snp {
             or croak "cannot open < $file: $!";
         while (<$fh>) {
             my $str = "$_";
-            $str =~ /.*($ref_genome_name)/x;
-            $loc_ref_name = $1;
+            $str =~ /.*($RefGenomeName)/x;
+            $locRefGenomeName = $1;
             $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
 
             if ( length($2) == 1 && length($3) == 1 ) {
 
-                # my %tmp = &get_locus_info( $1, $3 );
-                if ( $loc_ref_name ne $ref_genome_name ) {
+                # my %LocusInfoReader = &get_locus_info( $1, $3 );
+                if ( $locRefGenomeName ne $RefGenomeName ) {
                     print
-                        "$file\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                        "$file\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
                     last;
                 }
                 $all_snp_h{$1}{'pos'} = "$1";
@@ -2054,13 +3115,13 @@ sub compare_list_by_snp {
     }
 
     foreach my $key ( sort keys %results_h ) {
-        my %tmp = &get_locus_info( $key, $results_h{$key}{'alt'} );
-        if ($tmp{'locus'} ne ""
+        my %LocusInfoReader = &get_locus_info( $key, $results_h{$key}{'alt'} );
+        if ($LocusInfoReader{'locus'} ne ""
 
-            # && $tmp{'alt_aa_long'} ne 'STOP'
-            # && $tmp{'ref_aa_long'} ne 'STOP'
-            && $tmp{'alt_aa_long'} ne 'BAD_CODON'
-            && $tmp{'ref_aa_long'} ne 'BAD_CODON'
+            # && $LocusInfoReader{'alt_aa_long'} ne 'STOP'
+            # && $LocusInfoReader{'ref_aa_long'} ne 'STOP'
+            && $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+            && $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON'
             )
         {
             # if ( $options{color} == 1 ) {
@@ -2069,7 +3130,7 @@ sub compare_list_by_snp {
             # . "\nSNP_POS:\n\t $key";
             print "\nLOCUS:\n\t";
             print
-                "$tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n";
+                "$LocusInfoReader{'locus'} $key $LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'} $LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'} $LocusInfoReader{'snp_type'} $LocusInfoReader{'product'} \n";
 
   # print colored ['bold yellow'], "FOUND: " . $results_h{$key}{'count'} . "/"
   #     . scalar(@files);
@@ -2096,7 +3157,7 @@ sub compare_list_by_snp {
 # else {
 #     print "\n"
 #         . "-" x 50
-#         . "\nLOCUS:\n\t $tmp{'locus'} $key $tmp{'ref_codon'}/$tmp{'alt_codon'} $tmp{'ref_aa_short'}$tmp{'aa_pos'}$tmp{'alt_aa_short'} $tmp{'snp_type'} $tmp{'product'} \n"
+#         . "\nLOCUS:\n\t $LocusInfoReader{'locus'} $key $LocusInfoReader{'ref_codon'}/$LocusInfoReader{'alt_codon'} $LocusInfoReader{'ref_aa_short'}$LocusInfoReader{'aa_pos'}$LocusInfoReader{'alt_aa_short'} $LocusInfoReader{'snp_type'} $LocusInfoReader{'product'} \n"
 #         . "FOUND_IN ("
 #         . $results_h{$key}{'count'} . "/"
 #         . scalar(@files)
@@ -2141,7 +3202,7 @@ sub test4 {
     my $snp_count        = 0;
     my $tab              = "";
     my $res              = "";
-    my $loc_ref_name     = "";
+    my $locRefGenomeName     = "";
     my $loc_snp_notation = "";
     my %seq_per_file_h;
     my $start = time;
@@ -2154,15 +3215,15 @@ sub test4 {
             or croak "cannot open < $file: $!";
         while (<$fh>) {
             my $str = "$_";
-            $str =~ /.*($ref_genome_name)/x;
-            $loc_ref_name = $1;
+            $str =~ /.*($RefGenomeName)/x;
+            $locRefGenomeName = $1;
             $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
             if ( length($2) == 1 && length($3) == 1 ) {
 
-                # my %tmp = &get_locus_info( $1, $3 );
-                if ( $loc_ref_name ne $ref_genome_name ) {
+                # my %LocusInfoReader = &get_locus_info( $1, $3 );
+                if ( $locRefGenomeName ne $RefGenomeName ) {
                     print
-                        "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                        "\t\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
                     last;
                 }
 
@@ -2196,7 +3257,7 @@ sub make_seq_aa {
     my $snp_count        = 0;
     my $tab              = "";
     my $res              = "";
-    my $loc_ref_name     = "";
+    my $locRefGenomeName     = "";
     my $loc_snp_notation = "";
     my %seq_per_file_h;
     my %seq_ref_h;
@@ -2206,57 +3267,62 @@ sub make_seq_aa {
     my $check_ref_used = 0;
     my $pb             = ".";
 
+<<<<<<< HEAD
+    print "Reading files:\n"  if $options{o} ne "";
+=======
     print "Reading files:\n" if $options{o} ne "";
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
     open( my $fh_out, ">", $options{o} ) if $options{o} ne "";
 
     foreach my $file (@files) {
 
-        print "$file\n" if $options{o} ne "";
+<<<<<<< HEAD
+        print "$file\n"  if $options{o} ne "";
         my @res_a;
         open( my $fh, "<", $file )
             or croak "cannot open < $file: $!";
         while (<$fh>) {
             my $str = "$_";
-            $str =~ /.*($ref_genome_name)/x;
-            $loc_ref_name = $1;
+            $str =~ /.*($RefGenomeName)/x;
+            $locRefGenomeName = $1;
             $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
             if ( length($2) == 1 && length($3) == 1 ) {
 
-                my %tmp = &get_locus_info( $1, $3 );
-                if ( $loc_ref_name ne $ref_genome_name ) {
+                my %LocusInfoReader = &get_locus_info( $1, $3 );
+                if ( $locRefGenomeName ne $RefGenomeName ) {
                     print
-                        "\t\tREFERENCE GENOME: $ref_genome_name NOT FOUND!!!\n";
+                        "\t\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
                     last;
                 }
-                if ($tmp{'locus'} ne ""
+                if ($LocusInfoReader{'locus'} ne ""
 
-                    # && $tmp{'alt_aa_long'} ne 'STOP'
-                    # && $tmp{'ref_aa_long'} ne 'STOP'
-                    && $tmp{'alt_aa_long'} ne 'BAD_CODON'
-                    && $tmp{'ref_aa_long'} ne 'BAD_CODON'
+                    # && $LocusInfoReader{'alt_aa_long'} ne 'STOP'
+                    # && $LocusInfoReader{'ref_aa_long'} ne 'STOP'
+                    && $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+                    && $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON'
                     && $4 > 10
                     )
                 {
                     $char_count++;
-                    $seq_per_file_h{$file}{'seq'} .= $tmp{"alt_aa_short"};
+                    $seq_per_file_h{$file}{'seq'} .= $LocusInfoReader{"alt_aa_short"};
 
-       # $seq_per_file_h{$file}{$tmp{"snp_genome_pos"}}= $tmp{"alt_aa_short"};
+       # $seq_per_file_h{$file}{$LocusInfoReader{"snp_genome_pos"}}= $LocusInfoReader{"alt_aa_short"};
                     $seq_per_file_h{$file}{'aa_pos'}
                         .= $char_count . ":"
-                        . $tmp{"locus"} . ":"
-                        . $tmp{"snp_genome_pos"} . ":"
-                        . $tmp{"ref_aa_short"}
-                        . $tmp{"aa_pos"}
-                        . $tmp{"alt_aa_short"} . ":"
+                        . $LocusInfoReader{"locus"} . ":"
+                        . $LocusInfoReader{"snp_genome_pos"} . ":"
+                        . $LocusInfoReader{"ref_aa_short"}
+                        . $LocusInfoReader{"aa_pos"}
+                        . $LocusInfoReader{"alt_aa_short"} . ":"
                         . $4 . "|";
-                    $seq_per_file_h{$file}{ $tmp{"snp_genome_pos"} }
-                        = $tmp{"alt_aa_short"};
+                    $seq_per_file_h{$file}{ $LocusInfoReader{"snp_genome_pos"} }
+                        = $LocusInfoReader{"alt_aa_short"};
 
                     # if ($check_ref_used ==0){
-                    $seq_ref_h{ $tmp{"snp_genome_pos"} }
-                        = $tmp{"ref_aa_short"};
-                    $all_pos_h{ $tmp{"snp_genome_pos"} }
-                        = $tmp{"snp_genome_pos"};
+                    $seq_ref_h{ $LocusInfoReader{"snp_genome_pos"} }
+                        = $LocusInfoReader{"ref_aa_short"};
+                    $all_pos_h{ $LocusInfoReader{"snp_genome_pos"} }
+                        = $LocusInfoReader{"snp_genome_pos"};
 
                     # }
 
@@ -2274,7 +3340,7 @@ sub make_seq_aa {
         # $pb .= ".";
 
     }
-    print "done!\n" if $options{o} ne "";
+    print "done!\n"  if $options{o} ne "";
 
     # system("clear");
     # print "-" x 50 . "\n";
@@ -2303,12 +3369,12 @@ sub make_seq_aa {
     # foreach my $key ( sort { $a <=> $b } keys %all_pos_h ) {
     #     $ref_seq .= $seq_ref_h{$key};
     # }
-    # print ">$ref_genome_name\t" . length($ref_seq) . "\n$ref_seq\n";
+    # print ">$RefGenomeName\t" . length($ref_seq) . "\n$ref_seq\n";
     # ----------------------------------------------------------
 
     # print Dumper(sort {$a <=> $b} %seq_ref_h);
     # if ($check_ref_used == 0){
-    # print ">$ref_genome_name\n";
+    # print ">$RefGenomeName\n";
     # foreach my $key ( sort { $a <=> $b} keys  %seq_ref_h ) {
     #     print $seq_ref_h{$key};
 
@@ -2333,6 +3399,169 @@ sub make_seq_aa {
     }
 
     print "Work was finished. The $options{o} file was saved.\n"
+        if $options{o} ne "";
+
+    # print "Execution time: $duration s\n";
+
+}
+
+
+sub make_seq_nc {
+    my @files       = glob('*.vcf');
+    my $class_found = 0;
+    my $class_query = "";
+    my $query_locus = "";
+    my $query_snp   = "";
+    my @class_a;
+    my $snp_count        = 0;
+    my $tab              = "";
+    my $res              = "";
+    my $locRefGenomeName     = "";
+    my $loc_snp_notation = "";
+    my %seq_per_file_h;
+    my %seq_ref_h;
+    my %all_pos_h;
+    my $start          = time;
+    my $char_count     = 0;
+    my $check_ref_used = 0;
+    my $pb             = ".";
+
+    print "Reading files:\n"  if $options{o} ne "";
+    open( my $fh_out, ">", $options{o} ) if $options{o} ne "";
+
+    foreach my $file (@files) {
+
+        print "$file\n"  if $options{o} ne "";
+=======
+        print "$file\n" if $options{o} ne "";
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
+        my @res_a;
+        open( my $fh, "<", $file )
+            or croak "cannot open < $file: $!";
+        while (<$fh>) {
+            my $str = "$_";
+            $str =~ /.*($RefGenomeName)/x;
+            $locRefGenomeName = $1;
+            $str =~ /^\S+\W+(\d+)\W+(\w+)\s+(\w+).*DP=(\d+)/x;
+            if ( length($2) == 1 && length($3) == 1 ) {
+
+                my %LocusInfoReader = &get_locus_info( $1, $3 );
+                if ( $locRefGenomeName ne $RefGenomeName ) {
+                    print
+                        "\t\tREFERENCE GENOME: $RefGenomeName NOT FOUND!!!\n";
+                    last;
+                }
+                if ($LocusInfoReader{'locus'} ne ""
+
+                    # && $LocusInfoReader{'alt_aa_long'} ne 'STOP'
+                    # && $LocusInfoReader{'ref_aa_long'} ne 'STOP'
+                    && $LocusInfoReader{'alt_aa_long'} ne 'BAD_CODON'
+                    && $LocusInfoReader{'ref_aa_long'} ne 'BAD_CODON'
+                    && $4 > 10
+                    )
+                {
+                    $char_count++;
+                    $seq_per_file_h{$file}{'seq'} .= $LocusInfoReader{"alt"};
+
+       # $seq_per_file_h{$file}{$LocusInfoReader{"snp_genome_pos"}}= $LocusInfoReader{"alt_aa_short"};
+                    $seq_per_file_h{$file}{'aa_pos'}
+                        .= $char_count . ":"
+                        . $LocusInfoReader{"locus"} . ":"
+                        . $LocusInfoReader{"snp_genome_pos"} . ":"
+                        . $LocusInfoReader{"ref_aa_short"}
+                        . $LocusInfoReader{"aa_pos"}
+                        . $LocusInfoReader{"alt_aa_short"} . ":"
+                        . $4 . "|";
+                    $seq_per_file_h{$file}{ $LocusInfoReader{"snp_genome_pos"} }
+                        = $LocusInfoReader{"alt"};
+
+                    # if ($check_ref_used ==0){
+                    $seq_ref_h{ $LocusInfoReader{"snp_genome_pos"} }
+                        = $LocusInfoReader{"ref"};
+                    $all_pos_h{ $LocusInfoReader{"snp_genome_pos"} }
+                        = $LocusInfoReader{"snp_genome_pos"};
+
+                    # }
+
+                }
+
+            }
+
+        }
+        close $fh;
+        $char_count = 0;
+        local $| = 1;
+
+        # my $pb =".";
+        # print "\b$pb"; if $options{debug};
+        # $pb .= ".";
+
+    }
+<<<<<<< HEAD
+    print "done!\n"  if $options{o} ne "";
+=======
+    print "done!\n" if $options{o} ne "";
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
+
+    # system("clear");
+    # print "-" x 50 . "\n";
+
+    foreach my $file (@files) {
+        my $res_seq = "";
+        foreach my $key ( sort { $a <=> $b } keys %all_pos_h ) {
+            if ( exists $seq_per_file_h{$file}{$key} ) {
+                $res_seq .= $seq_per_file_h{$file}{$key};
+            }
+            else {
+                $res_seq .= $seq_ref_h{$key};
+            }
+
+        }
+
+        print ">" . basename( $file, ".vcf" ) . "\n$res_seq\n"
+            if $options{o} eq "";
+        print $fh_out ">" . basename( $file, ".vcf" ) . "\n$res_seq\n"
+            if $options{o} ne "";
+
+    }
+
+    # ---------------------------------------------------------
+    # my $ref_seq = "";
+    # foreach my $key ( sort { $a <=> $b } keys %all_pos_h ) {
+    #     $ref_seq .= $seq_ref_h{$key};
+    # }
+    # print ">$RefGenomeName\t" . length($ref_seq) . "\n$ref_seq\n";
+    # ----------------------------------------------------------
+
+    # print Dumper(sort {$a <=> $b} %seq_ref_h);
+    # if ($check_ref_used == 0){
+    # print ">$RefGenomeName\n";
+    # foreach my $key ( sort { $a <=> $b} keys  %seq_ref_h ) {
+    #     print $seq_ref_h{$key};
+
+    # }
+    # print "\n";
+    # $check_ref_used=1;
+    # }
+    #-----------------------------------------------
+    # foreach my $key ( sort keys %seq_per_file_h ) {
+
+    #     print ">$key\n" . $seq_per_file_h{$key}{'seq'} . "\n";
+    # }
+
+    if ( $options{action} eq "t5.1" ) {
+        print "-" x 50 . "\n";
+        foreach my $key ( sort keys %seq_per_file_h ) {
+
+            print ">$key\n" . $seq_per_file_h{$key}{'aa_pos'} . "\n";
+
+        }
+        my $duration = time - $start;
+    }
+
+    print "Work was finished. The $options{o} file was saved.\n"
+<<<<<<< HEAD
+=======
         if $options{o} ne "";
 
     # print "Execution time: $duration s\n";
@@ -2509,11 +3738,14 @@ sub make_seq_nc {
     }
 
     print "Work was finished. The $options{o} file was saved.\n"
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
         if $options{o} ne "";
 
     # print "Execution time: $duration s\n";
 
 }
+
+
 
 # ------------------------------------------------------------
 #
@@ -2522,56 +3754,56 @@ sub make_seq_nc {
 
 sub get_locus_info {
 
-    # my $loc_snp_pos    = shift;
+    # my $locSnpPosInGenome    = shift;
     # my $loc_alt        = shift;
-    my ( $loc_snp_pos, $loc_alt, $enable_calcs ) = @_;
-    my $loc_locus_name = "";
-    my %locus_info_h;
-    my $snp_gene_pos;
-    my $snp_type    = "";
+    my ( $locSnpPosInGenome, $loc_alt, $enable_calcs ) = @_;
+    my $locGeneLocusName = "";
+    my %LocusInfoProvider;
+    my $snpPosInGene;
+    my $typeOfSNP    = "";
     my $gene_length = 0;
     my ( $tang, $gd, $blossum45, $pam30 );
     my $loc_AACI_flag = "----";
 
     foreach my $key ( sort keys %database ) {
 
-        if (   $loc_snp_pos >= scalar $database{$key}{'start'}
-            && $loc_snp_pos <= scalar $database{$key}{'end'} )
+        if (   $locSnpPosInGenome >= scalar $database{$key}{'start'}
+            && $locSnpPosInGenome <= scalar $database{$key}{'end'} )
         {
-            $loc_locus_name = $key;
+            $locGeneLocusName = $key;
             last;
 
         }
 
     }
 
-    if ( $loc_locus_name ne "" ) {
-        my $loc_start        = $database{$loc_locus_name}{"start"};
-        my $loc_end          = $database{$loc_locus_name}{"end"};
-        my $loc_strand       = $database{$loc_locus_name}{"strand"};
-        my $loc_transl_table = $database{$loc_locus_name}{"transl_table"};
-        my $loc_product      = $database{$loc_locus_name}{"product"};
-        my $loc_note         = $database{$loc_locus_name}{"note"};
-        my $loc_nuc_seq      = $database{$loc_locus_name}{"sequence"};
+    if ( $locGeneLocusName ne "" ) {
+        my $locStartOfGene        = $database{$locGeneLocusName}{"start"};
+        my $locEndOfGene          = $database{$locGeneLocusName}{"end"};
+        my $locStrandDirection       = $database{$locGeneLocusName}{"strand"};
+        my $locTranslationTable = $database{$locGeneLocusName}{"transl_table"};
+        my $loc_product      = $database{$locGeneLocusName}{"product"};
+        my $loc_note         = $database{$locGeneLocusName}{"note"};
+        my $loc_nuc_seq      = $database{$locGeneLocusName}{"sequence"};
 
-        if ( $loc_strand == 1 ) {
-            $snp_gene_pos = ( ( $loc_snp_pos - $loc_start ) + 1 );
+        if ( $locStrandDirection == 1 ) {
+            $snpPosInGene = ( ( $locSnpPosInGenome - $locStartOfGene ) + 1 );
         }
-        elsif ( $loc_strand == -1 ) {
-            $snp_gene_pos = ( ( $loc_end - $loc_snp_pos ) + 1 );
+        elsif ( $locStrandDirection == -1 ) {
+            $snpPosInGene = ( ( $locEndOfGene - $locSnpPosInGenome ) + 1 );
             $loc_alt =~ tr/ACGT/TGCA/;
         }
-        if ( $loc_end > $loc_start ) {
-            $gene_length = ( $loc_end - $loc_start ) + 1;
+        if ( $locEndOfGene > $locStartOfGene ) {
+            $gene_length = ( $locEndOfGene - $locStartOfGene ) + 1;
         }
-        elsif ( $loc_start > $loc_end ) {
-            $gene_length = ( $loc_start - $loc_end ) + 1;
+        elsif ( $locStartOfGene > $locEndOfGene ) {
+            $gene_length = ( $locStartOfGene - $locEndOfGene ) + 1;
         }
-        my $loc_ref = substr( $loc_nuc_seq, $snp_gene_pos - 1, 1 );
-        my $codon_nbr = int( ( $snp_gene_pos - 1 ) / 3 ) + 1;
+        my $loc_ref = substr( $loc_nuc_seq, $snpPosInGene - 1, 1 );
+        my $codon_nbr = int( ( $snpPosInGene - 1 ) / 3 ) + 1;
         my @codons        = unpack( "(A3)*", $loc_nuc_seq );
         my $res_codon     = lc( $codons[ $codon_nbr - 1 ] );
-        my $loc_codon_pos = ( ( $codon_nbr * 3 ) - $snp_gene_pos );
+        my $loc_codon_pos = ( ( $codon_nbr * 3 ) - $snpPosInGene );
         if ( $loc_codon_pos == 2 ) {
             $loc_codon_pos = 0;
         }
@@ -2590,25 +3822,25 @@ sub get_locus_info {
             and $alt_aa ne "BAD_CODON"
             and $ref_aa ne "BAD_CODON" )
         {
-            $snp_type = "synonymous";
+            $typeOfSNP = "synonymous";
         }
         elsif ( $ref_aa ne $alt_aa
             and $alt_aa ne "X"
             and $alt_aa ne "BAD_CODON"
             and $ref_aa ne "BAD_CODON" )
         {
-            $snp_type = "missense";
+            $typeOfSNP = "missense";
         }
         elsif ( $ref_aa ne $alt_aa
             and $alt_aa eq "X"
             and $alt_aa ne "BAD_CODON"
             and $ref_aa ne "BAD_CODON" )
         {
-            $snp_type = "nonsense";
+            $typeOfSNP = "nonsense";
 
         }
 
-        if ( $enable_calcs eq 1 and $snp_type eq "missense" ) {
+        if ( $enable_calcs eq 1 and $typeOfSNP eq "missense" ) {
             $tang = calcutalte_tang_index( $ref_aa, $alt_aa );
             $gd = calculate_grantham_matrix( $ref_aa, $alt_aa );
             $blossum45 = calculate_blosum45_matrix( $ref_aa, $alt_aa );
@@ -2632,14 +3864,14 @@ sub get_locus_info {
             }
 
         }
-        elsif ( $enable_calcs eq 1 and $snp_type eq "synonymous" ) {
+        elsif ( $enable_calcs eq 1 and $typeOfSNP eq "synonymous" ) {
             $tang          = "-";
             $gd            = "-";
             $blossum45     = "-";
             $pam30         = "-";
             $loc_AACI_flag = "----";
         }
-        elsif ( $enable_calcs eq 1 and $snp_type eq "nonsense" ) {
+        elsif ( $enable_calcs eq 1 and $typeOfSNP eq "nonsense" ) {
             $tang          = "-";
             $gd            = "-";
             $blossum45     = "-";
@@ -2647,21 +3879,21 @@ sub get_locus_info {
             $loc_AACI_flag = "----";
         }
 
-        %locus_info_h = (
-            "locus"          => $loc_locus_name,
-            "snp_genome_pos" => $loc_snp_pos,
-            "start"          => $loc_start,
-            "end"            => $loc_end,
-            "strand"         => $loc_strand,
+        %LocusInfoProvider = (
+            "locus"          => $locGeneLocusName,
+            "snp_genome_pos" => $locSnpPosInGenome,
+            "start"          => $locStartOfGene,
+            "end"            => $locEndOfGene,
+            "strand"         => $locStrandDirection,
             "product"        => $loc_product,
             "sequence"       => $loc_nuc_seq,
-            "snp_gene_pos"   => $snp_gene_pos,
+            "snp_gene_pos"   => $snpPosInGene,
             "alt"            => $loc_alt,
-            "snp"            => "$snp_gene_pos$loc_ref>$loc_alt",
+            "snp"            => "$snpPosInGene$loc_ref>$loc_alt",
             "ref"            => $loc_ref,
             "aa_pos"         => $codon_nbr,
             "ref_codon"      => $res_codon,
-            "snp_type"       => $snp_type,
+            "snp_type"       => $typeOfSNP,
             "ref_aa_long"    => $ref_aa,
             "alt_aa_long"    => $alt_aa,
             "ref_aa_short"   => &aa_decode($ref_aa),
@@ -2678,7 +3910,7 @@ sub get_locus_info {
             "AACI"           => $loc_AACI_flag,
 
         );
-        return %locus_info_h;
+        return %LocusInfoProvider;
         $loc_AACI_flag = "----";
     }
     else {
@@ -2692,31 +3924,31 @@ sub get_locus_info {
 # ------------------------------------------------------------
 
 sub get_locus_name {
-    my $loc_snp_pos    = shift;
-    my $loc_locus_name = "";
+    my $locSnpPosInGenome    = shift;
+    my $locGeneLocusName = "";
 
     foreach my $key ( keys %database ) {
-        if (   $loc_snp_pos >= scalar $database{$key}{'start'}
-            && $loc_snp_pos <= scalar $database{$key}{'end'} )
+        if (   $locSnpPosInGenome >= scalar $database{$key}{'start'}
+            && $locSnpPosInGenome <= scalar $database{$key}{'end'} )
         {
-            $loc_locus_name = $key;
+            $locGeneLocusName = $key;
             last;
         }
 
     }
 
-    if ( $loc_locus_name ne "" ) {
-        return $loc_locus_name;
+    if ( $locGeneLocusName ne "" ) {
+        return $locGeneLocusName;
     }
 }
 
 sub check_position {
-    my $loc_snp_pos = shift;
+    my $locSnpPosInGenome = shift;
     my $type_pos    = "";
 
     foreach my $key ( keys %database ) {
-        if (   $loc_snp_pos >= scalar $database{$key}{'start'}
-            && $loc_snp_pos <= scalar $database{$key}{'end'} )
+        if (   $locSnpPosInGenome >= scalar $database{$key}{'start'}
+            && $locSnpPosInGenome <= scalar $database{$key}{'end'} )
         {
             $type_pos = "coding";
             last;
@@ -2834,7 +4066,7 @@ sub calculate_grantham_matrix {
 
     # print @AAs;
 
-    # print values $tmp{matrix}{R};
+    # print values $LocusInfoReader{matrix}{R};
     if ( $aa_ref ne "" && $aa_alt ne "" ) {
 
         # return $GD_dic->{$aa_ref}->{$aa_alt};
@@ -2842,7 +4074,7 @@ sub calculate_grantham_matrix {
 
         # exit;
 
-        # print $tmp->{GD}->{$aa_ref}->{$aa_alt} . "!!!!!!\n";
+        # print $LocusInfoReader->{GD}->{$aa_ref}->{$aa_alt} . "!!!!!!\n";
         # exit;
     }
 }
@@ -2853,7 +4085,7 @@ sub calculate_blosum45_matrix {
 
     # print @AAs;
 
-    # print values $tmp{matrix}{R};
+    # print values $LocusInfoReader{matrix}{R};
     if ( $aa_ref ne "" && $aa_alt ne "" ) {
 
         # return $GD_dic->{$aa_ref}->{$aa_alt};
@@ -2861,7 +4093,7 @@ sub calculate_blosum45_matrix {
 
         # exit;
 
-        # print $tmp->{GD}->{$aa_ref}->{$aa_alt} . "!!!!!!\n";
+        # print $LocusInfoReader->{GD}->{$aa_ref}->{$aa_alt} . "!!!!!!\n";
         # exit;
     }
 }
@@ -3340,20 +4572,24 @@ The select of database filename created by gb2db.pl script.
 
 =back
 
-=head1 actions 
+=head1 actions
 
 =over 20
 
-=item B<annotation >  
+=item B<annotation >
 
 Description....
 
 
-=item B<uniq>  
+=item B<uniq>
 
 Description....
 
-=item B<check_snp >  
+=item B<check_snp >
+
+Description....
+
+=item B<aa_cons>
 
 Description....
 
@@ -3378,6 +4614,9 @@ Description....
 
 =over 20
 
+<<<<<<< HEAD
+=item B<-vcf> <vcf file>
+=======
 =item B<-vcf> <vcf file>   
 
 Description....
@@ -3387,12 +4626,26 @@ Description....
 Description....
 
 =item B<-indel>    
+>>>>>>> a1827220d481b5c1534176827f8ddb76a4b3f37e
 
 Description....
 
-=item B<--snp_list> <snp_list name>   
+=item B<-lvl> <1..6>
 
 Description....
+
+=item B<-indel>
+
+Description....
+
+=item B<--snp_list> <snp_list name>
+
+Description....
+
+=item B<--snp_list> <?>
+
+Get a list of all snp list names.
+
 
 =back
 =cut
